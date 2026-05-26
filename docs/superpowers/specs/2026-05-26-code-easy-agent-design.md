@@ -45,6 +45,12 @@ Use a TypeScript monorepo with a shared agent core and separate UI entry points:
 
 The CLI and desktop app must call the same runtime API. They must not embed separate agent logic.
 
+## Frontend And Backend Boundaries
+
+Frontend code means `apps/cli`, `apps/desktop`, and UI-facing shared packages such as `packages/ui-protocol`. Backend code means `packages/agent-core`, `packages/runtime`, `packages/tools`, `packages/storage`, and `packages/permissions`. Cross-boundary communication must use typed command and event schemas from `packages/ui-protocol`.
+
+Frontend code may render state, request user actions, and send approved commands. It must not directly call tools, mutate checkpoint state, read arbitrary workspace files, or construct LangGraph nodes. Backend code may execute tools, persist state, and coordinate the graph. It must not import React components, terminal rendering helpers, or desktop renderer modules.
+
 ## High-Level Architecture
 
 ```mermaid
@@ -197,6 +203,25 @@ type AgentEvent =
 
 The CLI renders this as terminal output. The desktop app renders it as chat messages, tool cards, diff panels, and approval dialogs.
 
+## Frontend Code Constraints
+
+Frontend implementation must be presentation-focused and deterministic. The UI renders `AgentEvent` streams and sends explicit user intents back to the runtime. UI state should be derived from event replay where practical, so CLI output, desktop views, and persisted sessions stay consistent.
+
+Rules:
+
+- All UI-runtime contracts must live in `packages/ui-protocol`.
+- CLI and desktop must consume the same `AgentEvent` union.
+- UI components must never import `packages/tools`, `packages/storage`, or LangGraph directly.
+- Approval actions must send structured decisions, not free-form strings.
+- Diff rendering must use backend-provided diff payloads and never re-read files from the renderer.
+- Desktop renderer code must run without Node integration; privileged work stays in Electron main or the runtime process.
+- React components should be small, typed, and state-light; long-running work belongs in runtime services.
+- Visual design should favor dense operational layouts: session list, stream, tool timeline, diff panel, and approval panel.
+- The desktop app must support empty, loading, streaming, failed, cancelled, approval-pending, and completed states.
+- Frontend tests should cover event-to-view reducers, approval flows, diff rendering, and IPC contract validation.
+
+The frontend should not invent hidden behavior. If the user clicks approve, cancel, resume, or run, the action must map to a named runtime command.
+
 ## CLI Design
 
 The CLI should be useful before the desktop app exists.
@@ -225,6 +250,25 @@ Views:
 - Settings for model provider, profiles, and MCP servers.
 
 The desktop app should not introduce new agent behavior. It is a richer renderer over the same runtime API.
+
+## Backend Code Constraints
+
+Backend implementation must be modular, auditable, and conservative. The runtime owns all side effects. Every side effect must pass through tool schemas, permission checks, event emission, and persistence where applicable.
+
+Rules:
+
+- LangGraph-specific code stays inside `packages/agent-core`.
+- Public runtime APIs must be stable TypeScript interfaces, not raw LangGraph graph objects.
+- Every tool must define input schema, output schema, risk level, timeout behavior, and event rendering metadata.
+- File writes must use patch-style operations for MVP.
+- Shell commands must include cwd, timeout, environment policy, output limits, and cancellation support.
+- Storage writes must be explicit repository calls; no package outside `packages/storage` should write SQLite directly.
+- Permission checks must run before side effects, including tool calls triggered by resumed checkpoints.
+- Errors must use typed categories so the UI can distinguish denial, timeout, command failure, model failure, and runtime failure.
+- Runtime code must be cancellable; cancellation should emit a terminal event and avoid partial silent state.
+- Backend tests should cover graph routing, permission decisions, tool execution, storage persistence, checkpoint resume, and event emission order.
+
+The backend should prefer small services with clear interfaces over global mutable state. A feature is not complete until its events, permission behavior, persistence impact, and tests are defined.
 
 ## Profiles And Skills
 
