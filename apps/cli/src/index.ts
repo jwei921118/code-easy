@@ -49,4 +49,6 @@ program.action(() => {
   program.help();
 });
 
-await program.parseAsync(process.argv);
+const argv = process.argv[2] === "--" ? [...process.argv.slice(0, 2), ...process.argv.slice(3)] : process.argv;
+
+await program.parseAsync(argv);
