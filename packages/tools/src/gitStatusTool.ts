@@ -21,9 +21,22 @@ export const gitStatusTool: CodeEasyTool<typeof GitStatusInputSchema, GitStatusO
   inputSchema: GitStatusInputSchema,
   async run(input, context) {
     try {
-      const args = input.porcelain ? ["status", "--short"] : ["status"];
+      const args = [
+        "-c",
+        "core.fsmonitor=false",
+        "-c",
+        "maintenance.auto=false",
+        "-c",
+        "gc.auto=0",
+        "status",
+        ...(input.porcelain ? ["--short"] : [])
+      ];
       const { stdout, stderr } = await execFileAsync("git", args, {
         cwd: context.workspaceRoot,
+        env: {
+          ...process.env,
+          GIT_OPTIONAL_LOCKS: "0"
+        },
         timeout: 10_000,
         maxBuffer: 200_000
       });

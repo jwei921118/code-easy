@@ -1,4 +1,4 @@
-import { open, realpath } from "node:fs/promises";
+import { open, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import type { CodeEasyTool } from "./types.js";
@@ -14,12 +14,19 @@ type ReadFileOutput = {
   truncated: boolean;
 };
 
+class WorkspaceReadDeniedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "WorkspaceReadDeniedError";
+  }
+}
+
 function resolveInsideWorkspace(workspaceRoot: string, relativePath: string): string {
   const resolved = path.resolve(workspaceRoot, relativePath);
   const root = path.resolve(workspaceRoot);
 
   if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
-    throw new Error(`Path escapes workspace: ${relativePath}`);
+    throw new WorkspaceReadDeniedError(`Path escapes workspace: ${relativePath}`);
   }
 
   return resolved;
@@ -36,13 +43,18 @@ async function resolveRealPathInsideWorkspace(workspaceRoot: string, relativePat
   const [workspaceRealPath, targetRealPath] = await Promise.all([realpath(workspaceRoot), realpath(absolutePath)]);
 
   if (!isPathInside(workspaceRealPath, targetRealPath)) {
-    throw new Error(`Path escapes workspace: ${relativePath}`);
+    throw new WorkspaceReadDeniedError(`Path escapes workspace: ${relativePath}`);
   }
 
   return targetRealPath;
 }
 
 async function readBoundedUtf8File(absolutePath: string, maxBytes: number): Promise<{ content: string; truncated: boolean }> {
+  const fileStats = await stat(absolutePath);
+  if (!fileStats.isFile()) {
+    throw new WorkspaceReadDeniedError(`Path is not a regular file: ${absolutePath}`);
+  }
+
   const bytesToRead = maxBytes + 1;
   const buffer = Buffer.alloc(bytesToRead);
   const fileHandle = await open(absolutePath, "r");
@@ -87,10 +99,11 @@ export const readFileTool: CodeEasyTool<typeof ReadFileInputSchema, ReadFileOutp
         }
       };
     } catch (error) {
+      const denied = error instanceof WorkspaceReadDeniedError;
       return {
         ok: false,
         error: {
-          category: "tool_failed",
+          category: denied ? "denied" : "tool_failed",
           message: `Failed to read ${input.path}`,
           detail: error instanceof Error ? error.message : String(error)
         }

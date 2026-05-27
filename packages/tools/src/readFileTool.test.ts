@@ -1,4 +1,4 @@
-import { mkdtemp, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -39,6 +39,20 @@ describe("readFileTool", () => {
     const result = await readFileTool.run({ path: "link.txt", maxBytes: 80_000 }, { workspaceRoot });
 
     expect(result.ok).toBe(false);
+  });
+
+  it("rejects non-regular files", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-"));
+    await mkdir(path.join(workspaceRoot, "nested"));
+
+    const result = await readFileTool.run({ path: "nested", maxBytes: 80_000 }, { workspaceRoot });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        category: "denied"
+      }
+    });
   });
 
   it("reads at most maxBytes and marks larger files as truncated", async () => {
