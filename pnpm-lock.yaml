@@ -86,6 +86,12 @@ importers:
       '@code-easy/agent-core':
         specifier: workspace:*
         version: link:../agent-core
+      '@code-easy/permissions':
+        specifier: workspace:*
+        version: link:../permissions
+      '@code-easy/tools':
+        specifier: workspace:*
+        version: link:../tools
       '@code-easy/ui-protocol':
         specifier: workspace:*
         version: link:../ui-protocol
