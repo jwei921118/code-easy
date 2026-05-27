@@ -1,4 +1,5 @@
 .worktrees/
+.codegraph/
 node_modules/
 .pnpm-store/
 dist/
