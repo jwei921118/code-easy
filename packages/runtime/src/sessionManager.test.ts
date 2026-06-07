@@ -91,4 +91,32 @@ describe("SessionManager", () => {
       }
     });
   });
+
+  it("requests approval when default execute tools are run without approval", async () => {
+    const manager = new SessionManager();
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    const result = await manager.runTool({
+      workspaceRoot: process.cwd(),
+      toolName: "run_command",
+      input: {
+        command: process.execPath,
+        args: ["-e", "console.log('hello')"]
+      }
+    });
+
+    expect(result.outcome.status).toBe("approval_required");
+    expect(events.map((event) => event.type)).toEqual(["run.started", "approval.requested"]);
+    expect(events[1]).toMatchObject({
+      type: "approval.requested",
+      request: {
+        risk: "execute",
+        toolName: "run_command"
+      }
+    });
+  });
 });

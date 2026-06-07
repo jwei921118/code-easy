@@ -38,4 +38,26 @@ describe("code-easy cli", () => {
     expect(stdout).toContain("Tool completed: read_file");
     expect(stdout).toContain("Run completed:");
   });
+
+  it("runs an approved command tool and renders command output", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
+    const input = JSON.stringify({
+      command: process.execPath,
+      args: ["-e", "console.log('hello command')"]
+    });
+
+    const { stdout } = await execFileAsync(
+      "node",
+      ["--import", "tsx", "src/index.ts", "tool", "run_command", input, "--workspace", workspaceRoot, "--yes"],
+      {
+        cwd: process.cwd(),
+        timeout: 10_000
+      }
+    );
+
+    expect(stdout).toContain("Tool started: run_command");
+    expect(stdout).toContain("hello command");
+    expect(stdout).toContain("Tool completed: run_command");
+    expect(stdout).toContain("Run completed:");
+  });
 });
