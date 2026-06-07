@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -6,6 +6,40 @@ import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
+
+async function runCliWithInput(args: string[], input: string): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("node", ["--import", "tsx", "src/index.ts", ...args], {
+      cwd: process.cwd(),
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    let stdout = "";
+    let stderr = "";
+    const timeout = setTimeout(() => {
+      child.kill();
+      reject(new Error("CLI command timed out"));
+    }, 10_000);
+
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("error", (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.on("close", (exitCode) => {
+      clearTimeout(timeout);
+      resolve({ stdout, stderr, exitCode });
+    });
+
+    child.stdin.end(input);
+  });
+}
 
 describe("code-easy cli", () => {
   it("shows help when pnpm-style argument forwarding includes a standalone separator", async () => {
@@ -59,5 +93,25 @@ describe("code-easy cli", () => {
     expect(stdout).toContain("hello command");
     expect(stdout).toContain("Tool completed: run_command");
     expect(stdout).toContain("Run completed:");
+  });
+
+  it("prompts for approval before running an execute tool", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
+    const input = JSON.stringify({
+      command: process.execPath,
+      args: ["-e", "console.log('hello approved prompt')"]
+    });
+
+    const result = await runCliWithInput(
+      ["tool", "run_command", input, "--workspace", workspaceRoot],
+      "y\n"
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Approval required: run_command (execute)");
+    expect(result.stdout).toContain("Approve run_command? [y/N]");
+    expect(result.stdout).toContain("Approval resolved: approved");
+    expect(result.stdout).toContain("hello approved prompt");
+    expect(result.stdout).toContain("Run completed:");
   });
 });

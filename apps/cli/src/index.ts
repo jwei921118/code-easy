@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createInterface } from "node:readline/promises";
 import { program } from "commander";
 import { SessionManager } from "@code-easy/runtime";
 import type { AgentEvent } from "@code-easy/ui-protocol";
@@ -8,6 +9,20 @@ function parseJsonInput(input: string): unknown {
     return JSON.parse(input);
   } catch (error) {
     throw new Error(`Invalid JSON input: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+async function promptForApproval(toolName: string): Promise<boolean> {
+  const readline = createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  try {
+    const answer = await readline.question(`Approve ${toolName}? [y/N] `);
+    return answer.trim().toLowerCase() === "y" || answer.trim().toLowerCase() === "yes";
+  } finally {
+    readline.close();
   }
 }
 
@@ -82,13 +97,31 @@ program
   .action(async (name: string, input: string, options: { workspace: string; yes?: boolean }) => {
     const manager = new SessionManager();
     manager.subscribe(renderEvent);
+    const parsedInput = parseJsonInput(input);
 
-    await manager.runTool({
+    const result = await manager.runTool({
       workspaceRoot: options.workspace,
       toolName: name,
-      input: parseJsonInput(input),
+      input: parsedInput,
       approved: options.yes === true
     });
+
+    if (result.outcome.status === "approval_required" && options.yes !== true) {
+      const approved = await promptForApproval(name);
+
+      if (!approved) {
+        console.log("Approval denied.");
+        process.exitCode = 1;
+        return;
+      }
+
+      await manager.runTool({
+        workspaceRoot: options.workspace,
+        toolName: name,
+        input: parsedInput,
+        approved: true
+      });
+    }
   });
 
 program.action(() => {
