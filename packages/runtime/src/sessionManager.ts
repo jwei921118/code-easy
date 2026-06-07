@@ -2,14 +2,37 @@ import { randomUUID } from "node:crypto";
 import { createCodeEasyGraph } from "@code-easy/agent-core";
 import { RuntimeCommandSchema, type AgentEvent, type RunCommand } from "@code-easy/ui-protocol";
 import { AgentEventBus } from "./eventBus.js";
+import { PermissionedToolExecutor, type ToolExecutionOutcome } from "./toolExecutor.js";
+import { createDefaultToolRegistry, type ToolRegistry } from "./toolRegistry.js";
 
 export type RunResult = {
   runId: string;
   threadId: string;
 };
 
+export type RunToolCommand = {
+  threadId?: string;
+  workspaceRoot: string;
+  toolName: string;
+  input: unknown;
+  approved?: boolean;
+};
+
+export type RunToolResult = RunResult & {
+  outcome: ToolExecutionOutcome;
+};
+
+export type SessionManagerOptions = {
+  tools?: ToolRegistry;
+};
+
 export class SessionManager {
   private readonly events = new AgentEventBus();
+  private readonly tools: ToolRegistry;
+
+  constructor(options: SessionManagerOptions = {}) {
+    this.tools = options.tools ?? createDefaultToolRegistry();
+  }
 
   subscribe(handler: (event: AgentEvent) => void): () => void {
     return this.events.subscribe(handler);
@@ -55,6 +78,55 @@ export class SessionManager {
         error: {
           category: "runtime_failed",
           message: "Session run failed.",
+          detail: error instanceof Error ? error.message : String(error)
+        }
+      });
+      throw error;
+    }
+  }
+
+  async runTool(command: RunToolCommand): Promise<RunToolResult> {
+    const runId = randomUUID();
+    const threadId = command.threadId ?? randomUUID();
+    const tool = this.tools.get(command.toolName);
+
+    this.events.publish({ type: "run.started", runId, threadId });
+
+    if (!tool) {
+      const error = {
+        category: "invalid_tool_call" as const,
+        message: `Unknown tool: ${command.toolName}`
+      };
+      this.events.publish({ type: "run.failed", runId, error });
+      throw new Error(error.message);
+    }
+
+    try {
+      const executor = new PermissionedToolExecutor(this.events);
+      const outcome = await executor.execute({
+        runId,
+        workspaceRoot: command.workspaceRoot,
+        tool,
+        input: command.input,
+        approved: command.approved
+      });
+
+      if (outcome.status === "completed") {
+        this.events.publish({
+          type: "run.completed",
+          runId,
+          summary: `Tool ${command.toolName} completed.`
+        });
+      }
+
+      return { runId, threadId, outcome };
+    } catch (error) {
+      this.events.publish({
+        type: "run.failed",
+        runId,
+        error: {
+          category: "runtime_failed",
+          message: `Tool ${command.toolName} failed.`,
           detail: error instanceof Error ? error.message : String(error)
         }
       });
