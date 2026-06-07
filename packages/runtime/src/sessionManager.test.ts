@@ -63,6 +63,49 @@ describe("SessionManager", () => {
     });
   });
 
+  it("runs default search tools without requesting approval", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-runtime-"));
+    await writeFile(path.join(workspaceRoot, "README.md"), "hello search\n", "utf8");
+    const manager = new SessionManager();
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    const result = await manager.runTool({
+      workspaceRoot,
+      toolName: "rg_search",
+      input: { pattern: "search", path: ".", maxMatches: 10 }
+    });
+
+    expect(result.outcome.status).toBe("completed");
+    expect(events.map((event) => event.type)).toEqual(["run.started", "tool.started", "tool.completed", "run.completed"]);
+    expect(events[1]).toMatchObject({
+      type: "tool.started",
+      call: {
+        name: "rg_search",
+        risk: "read"
+      }
+    });
+    expect(events[2]).toMatchObject({
+      type: "tool.completed",
+      result: {
+        name: "rg_search",
+        ok: true,
+        output: {
+          matches: [
+            {
+              path: "README.md",
+              line: 1,
+              text: "hello search"
+            }
+          ]
+        }
+      }
+    });
+  });
+
   it("requests approval when default write tools are run without approval", async () => {
     const manager = new SessionManager();
     const events: AgentEvent[] = [];

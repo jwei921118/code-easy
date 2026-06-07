@@ -73,6 +73,34 @@ describe("code-easy cli", () => {
     expect(stdout).toContain("Run completed:");
   });
 
+  it("runs a search tool and renders matches", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
+    await writeFile(path.join(workspaceRoot, "note.txt"), "hello search cli\n", "utf8");
+
+    const { stdout } = await execFileAsync(
+      "node",
+      [
+        "--import",
+        "tsx",
+        "src/index.ts",
+        "tool",
+        "rg_search",
+        "{\"pattern\":\"search\",\"path\":\".\",\"maxMatches\":10}",
+        "--workspace",
+        workspaceRoot
+      ],
+      {
+        cwd: process.cwd(),
+        timeout: 10_000
+      }
+    );
+
+    expect(stdout).toContain("Tool started: rg_search");
+    expect(stdout).toContain("note.txt");
+    expect(stdout).toContain("hello search cli");
+    expect(stdout).toContain("Run completed:");
+  });
+
   it("runs an approved command tool and renders command output", async () => {
     const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
     const input = JSON.stringify({
