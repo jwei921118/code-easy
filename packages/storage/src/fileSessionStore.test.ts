@@ -100,21 +100,75 @@ describe("FileSessionStore", () => {
     await expect(store.listSessions()).resolves.toEqual([
       {
         runId: "run-new",
+        runIds: ["run-new"],
+        runCount: 1,
         threadId: "thread-new",
         workspaceRoot: "/workspace",
         prompt: "New task",
         status: "completed",
         startedAt: "2026-06-08T00:01:00.000Z",
+        lastUpdatedAt: "2026-06-08T00:01:01.000Z",
         completedAt: "2026-06-08T00:01:01.000Z",
         summary: "New task done."
       },
       {
         runId: "run-old",
+        runIds: ["run-old"],
+        runCount: 1,
         threadId: "thread-old",
         workspaceRoot: "/workspace",
         prompt: "Old task",
         status: "started",
-        startedAt: "2026-06-08T00:00:00.000Z"
+        startedAt: "2026-06-08T00:00:00.000Z",
+        lastUpdatedAt: "2026-06-08T00:00:00.000Z"
+      }
+    ]);
+  });
+
+  it("groups multiple runs for the same thread into one latest session summary", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "code-easy-store-"));
+    const store = new FileSessionStore(root);
+
+    await store.recordRunStarted({
+      runId: "run-1",
+      threadId: "thread-1",
+      workspaceRoot: "/workspace",
+      prompt: "First task",
+      startedAt: "2026-06-08T00:00:00.000Z"
+    });
+    await store.recordRunCompleted({
+      runId: "run-1",
+      status: "completed",
+      completedAt: "2026-06-08T00:00:01.000Z",
+      summary: "First done."
+    });
+    await store.recordRunStarted({
+      runId: "run-2",
+      threadId: "thread-1",
+      workspaceRoot: "/workspace",
+      prompt: "Followup task",
+      startedAt: "2026-06-08T00:02:00.000Z"
+    });
+    await store.recordRunCompleted({
+      runId: "run-2",
+      status: "completed",
+      completedAt: "2026-06-08T00:02:01.000Z",
+      summary: "Followup done."
+    });
+
+    await expect(store.listSessions()).resolves.toEqual([
+      {
+        runId: "run-2",
+        runIds: ["run-1", "run-2"],
+        runCount: 2,
+        threadId: "thread-1",
+        workspaceRoot: "/workspace",
+        prompt: "Followup task",
+        status: "completed",
+        startedAt: "2026-06-08T00:00:00.000Z",
+        lastUpdatedAt: "2026-06-08T00:02:01.000Z",
+        completedAt: "2026-06-08T00:02:01.000Z",
+        summary: "Followup done."
       }
     ]);
   });

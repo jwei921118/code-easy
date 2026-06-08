@@ -81,7 +81,9 @@ function renderSessions(sessions: Awaited<ReturnType<SessionManager["listSession
 
   for (const session of sessions) {
     const summary = session.summary ?? session.error ?? "";
-    console.log(`- ${session.threadId} ${session.status} "${session.prompt}" ${summary}`.trim());
+    console.log(
+      `- ${session.threadId} ${session.status} runs=${session.runCount} updated=${session.lastUpdatedAt} "${session.prompt}" ${summary}`.trim()
+    );
   }
 }
 

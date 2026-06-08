@@ -23,11 +23,14 @@ export type StoredEventRecord = {
 
 export type StoredSessionSummary = {
   runId: string;
+  runIds: string[];
+  runCount: number;
   threadId: string;
   workspaceRoot: string;
   prompt: string;
   status: "started" | "completed" | "failed";
   startedAt: string;
+  lastUpdatedAt: string;
   completedAt?: string;
   summary?: string;
   error?: string;

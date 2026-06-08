@@ -337,7 +337,11 @@ export class SessionManager {
       });
     }
 
-    const events = await store.listEvents(session.runId);
+    const runIds = session.runIds.length > 0 ? session.runIds : [session.runId];
+    const events = (await Promise.all(runIds.map((runId) => store.listEvents(runId))))
+      .flat()
+      .sort((left, right) => left.sequence - right.sequence);
+
     for (const record of events) {
       this.events.publish(record.event);
     }

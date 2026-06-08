@@ -13,6 +13,12 @@ type RunRecord =
   | (RunStartedRecord & { status: "started" })
   | (RunCompletedRecord & { threadId?: string; workspaceRoot?: string; prompt?: string });
 
+type CompletionDetails = {
+  completedAt?: string;
+  summary?: string;
+  error?: string;
+};
+
 function parseJsonLines<T>(content: string): T[] {
   return content
     .split("\n")
@@ -76,35 +82,48 @@ export class FileSessionStore implements SessionStore {
 
   async listSessions(): Promise<StoredSessionSummary[]> {
     const records = await this.listRunRecords();
-    const byRunId = new Map<string, StoredSessionSummary>();
+    const byThreadId = new Map<string, StoredSessionSummary>();
+    const runToThreadId = new Map<string, string>();
 
     for (const record of records) {
-      const existing = byRunId.get(record.runId);
-
       if (record.status === "started") {
-        byRunId.set(record.runId, {
+        runToThreadId.set(record.runId, record.threadId);
+        const existing = byThreadId.get(record.threadId);
+
+        byThreadId.set(record.threadId, {
           runId: record.runId,
+          runIds: [...(existing?.runIds ?? []), record.runId],
+          runCount: (existing?.runCount ?? 0) + 1,
           threadId: record.threadId,
           workspaceRoot: record.workspaceRoot,
           prompt: record.prompt,
           status: "started",
-          startedAt: record.startedAt
+          startedAt: existing?.startedAt ?? record.startedAt,
+          lastUpdatedAt: record.startedAt
         });
         continue;
       }
 
+      const threadId = runToThreadId.get(record.runId);
+      if (!threadId) continue;
+
+      const existing = byThreadId.get(threadId);
       if (!existing) continue;
 
-      byRunId.set(record.runId, {
+      const completion = completionDetails(record);
+      byThreadId.set(threadId, {
         ...existing,
-        status: record.status,
-        completedAt: record.completedAt,
-        summary: record.summary,
-        error: record.error
+        lastUpdatedAt: record.completedAt,
+        ...(existing.runId === record.runId
+          ? {
+              status: record.status,
+              ...completion
+            }
+          : {})
       });
     }
 
-    return [...byRunId.values()].sort((left, right) => right.startedAt.localeCompare(left.startedAt));
+    return [...byThreadId.values()].sort((left, right) => right.lastUpdatedAt.localeCompare(left.lastUpdatedAt));
   }
 
   async listEvents(runId?: string): Promise<StoredEventRecord[]> {
@@ -138,6 +157,14 @@ export class FileSessionStore implements SessionStore {
 
     await writeFile(ignorePath, `${current}${current.length > 0 && !current.endsWith("\n") ? "\n" : ""}*\n`, "utf8");
   }
+}
+
+function completionDetails(record: RunCompletedRecord): CompletionDetails {
+  return {
+    completedAt: record.completedAt,
+    ...(record.summary !== undefined ? { summary: record.summary } : {}),
+    ...(record.error !== undefined ? { error: record.error } : {})
+  };
 }
 
 async function readFileIfExists(filePath: string): Promise<string> {

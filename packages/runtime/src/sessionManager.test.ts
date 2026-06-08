@@ -39,12 +39,15 @@ class CapturingStore implements SessionStore {
   async listSessions(): Promise<StoredSessionSummary[]> {
     return [
       {
-        runId: "run-1",
+        runId: "run-2",
+        runIds: ["run-1", "run-2"],
+        runCount: 2,
         threadId: "thread-1",
         workspaceRoot: "/workspace",
-        prompt: "Find SessionManager",
+        prompt: "Find Followup",
         status: "completed",
         startedAt: "2026-06-08T00:00:00.000Z",
+        lastUpdatedAt: "2026-06-08T00:01:00.000Z",
         summary: "Workspace inspection completed."
       }
     ];
@@ -55,16 +58,26 @@ class CapturingStore implements SessionStore {
       return this.events.filter((record) => runId === undefined || record.event.runId === runId);
     }
 
-    return [
+    const records: StoredEventRecord[] = [
       {
         sequence: 1,
         event: {
-          type: "run.completed",
+          type: "run.started",
           runId: "run-1",
-          summary: "Workspace inspection completed."
+          threadId: "thread-1"
+        }
+      },
+      {
+        sequence: 2,
+        event: {
+          type: "run.completed",
+          runId: "run-2",
+          summary: "Followup completed."
         }
       }
     ];
+
+    return runId === undefined ? records : records.filter((record) => record.event.runId === runId);
   }
 }
 
@@ -180,13 +193,17 @@ describe("SessionManager", () => {
     expect(sessions).toEqual([
       expect.objectContaining({
         threadId: "thread-1",
-        prompt: "Find SessionManager",
+        prompt: "Find Followup",
         status: "completed"
       })
     ]);
+    expect(replayed[0]).toMatchObject({
+      type: "run.started",
+      runId: "run-1"
+    });
     expect(replayed.at(-1)).toMatchObject({
       type: "run.completed",
-      runId: "run-1"
+      runId: "run-2"
     });
   });
 

@@ -146,6 +146,7 @@ describe("code-easy cli", () => {
     expect(sessionsStdout).toContain("Stored sessions:");
     expect(sessionsStdout).toContain("Find SessionManager");
     expect(sessionsStdout).toContain("completed");
+    expect(sessionsStdout).toContain("runs=1");
     expect(threadId).toBeDefined();
 
     const { stdout: resumeStdout } = await execFileAsync(
@@ -204,6 +205,8 @@ describe("code-easy cli", () => {
     expect(continueStdout).toContain("Workspace context");
     expect(continueStdout).toContain("Followup cli context");
     expect(updatedSessionsStdout).toContain("Find Followup");
+    expect(updatedSessionsStdout).toContain("runs=2");
+    expect(updatedSessionsStdout.split("\n").filter((line) => line.startsWith("- "))).toHaveLength(1);
   });
 
   it("runs an approved command tool and renders command output", async () => {
