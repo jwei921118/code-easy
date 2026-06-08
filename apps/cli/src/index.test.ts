@@ -101,6 +101,29 @@ describe("code-easy cli", () => {
     expect(stdout).toContain("Run completed:");
   });
 
+  it("runs the basic agent loop and renders workspace context", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "README.md"), "SessionManager cli context\n", "utf8");
+
+    const { stdout } = await execFileAsync(
+      "node",
+      ["--import", "tsx", "src/index.ts", "run", "Find SessionManager", "--workspace", workspaceRoot],
+      {
+        cwd: process.cwd(),
+        timeout: 10_000
+      }
+    );
+
+    expect(stdout).toContain("Tool started: git_status");
+    expect(stdout).toContain("Tool started: list_files");
+    expect(stdout).toContain("Tool started: rg_search");
+    expect(stdout).toContain("Workspace context");
+    expect(stdout).toContain("README.md");
+    expect(stdout).toContain("SessionManager");
+    expect(stdout).toContain("Run completed: Workspace inspection completed.");
+  });
+
   it("runs an approved command tool and renders command output", async () => {
     const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
     const input = JSON.stringify({

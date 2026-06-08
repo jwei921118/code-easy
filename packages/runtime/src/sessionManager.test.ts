@@ -1,9 +1,13 @@
+import { execFile } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { SessionManager } from "./index.js";
 import type { AgentEvent } from "@code-easy/ui-protocol";
+
+const execFileAsync = promisify(execFile);
 
 describe("SessionManager", () => {
   it("emits run lifecycle events", async () => {
@@ -20,7 +24,46 @@ describe("SessionManager", () => {
       prompt: "Build a CLI"
     });
 
-    expect(events).toEqual(["run.started", "node.started", "node.completed", "message.delta", "run.completed"]);
+    expect(events[0]).toBe("run.started");
+    expect(events).toContain("node.started");
+    expect(events).toContain("node.completed");
+    expect(events).toContain("tool.started");
+    expect(events).toContain("tool.completed");
+    expect(events).toContain("message.delta");
+    expect(events.at(-1)).toBe("run.completed");
+  });
+
+  it("runs a deterministic read-only tool loop for run commands", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-loop-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "README.md"), "SessionManager loop context\n", "utf8");
+    const manager = new SessionManager();
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    await manager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Find SessionManager"
+    });
+
+    const toolNames = events.flatMap((event) => (event.type === "tool.started" ? [event.call.name] : []));
+    const messageText = events
+      .filter((event) => event.type === "message.delta")
+      .map((event) => event.text)
+      .join("\n");
+
+    expect(toolNames).toEqual(["git_status", "list_files", "rg_search"]);
+    expect(messageText).toContain("Workspace context");
+    expect(messageText).toContain("README.md");
+    expect(messageText).toContain("SessionManager");
+    expect(events.at(-1)).toMatchObject({
+      type: "run.completed",
+      summary: "Workspace inspection completed."
+    });
   });
 
   it("runs default read tools through the permissioned executor", async () => {
