@@ -1,7 +1,13 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { AgentEventSchema, type AgentEvent } from "@code-easy/ui-protocol";
-import type { RunCompletedRecord, RunStartedRecord, SessionStore, StoredEventRecord } from "./types.js";
+import type {
+  RunCompletedRecord,
+  RunStartedRecord,
+  SessionStore,
+  StoredEventRecord,
+  StoredSessionSummary
+} from "./types.js";
 
 type RunRecord =
   | (RunStartedRecord & { status: "started" })
@@ -66,6 +72,39 @@ export class FileSessionStore implements SessionStore {
 
   async listRunRecords(): Promise<RunRecord[]> {
     return readJsonLines<RunRecord>(this.runsPath);
+  }
+
+  async listSessions(): Promise<StoredSessionSummary[]> {
+    const records = await this.listRunRecords();
+    const byRunId = new Map<string, StoredSessionSummary>();
+
+    for (const record of records) {
+      const existing = byRunId.get(record.runId);
+
+      if (record.status === "started") {
+        byRunId.set(record.runId, {
+          runId: record.runId,
+          threadId: record.threadId,
+          workspaceRoot: record.workspaceRoot,
+          prompt: record.prompt,
+          status: "started",
+          startedAt: record.startedAt
+        });
+        continue;
+      }
+
+      if (!existing) continue;
+
+      byRunId.set(record.runId, {
+        ...existing,
+        status: record.status,
+        completedAt: record.completedAt,
+        summary: record.summary,
+        error: record.error
+      });
+    }
+
+    return [...byRunId.values()].sort((left, right) => right.startedAt.localeCompare(left.startedAt));
   }
 
   async listEvents(runId?: string): Promise<StoredEventRecord[]> {

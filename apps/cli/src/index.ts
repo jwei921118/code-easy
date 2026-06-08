@@ -71,6 +71,20 @@ function renderEvent(event: AgentEvent): void {
   }
 }
 
+function renderSessions(sessions: Awaited<ReturnType<SessionManager["listSessions"]>>): void {
+  console.log("Stored sessions:");
+
+  if (sessions.length === 0) {
+    console.log("No sessions found.");
+    return;
+  }
+
+  for (const session of sessions) {
+    const summary = session.summary ?? session.error ?? "";
+    console.log(`- ${session.threadId} ${session.status} "${session.prompt}" ${summary}`.trim());
+  }
+}
+
 program.name("code-easy").description("Local TypeScript coding agent").version("0.0.0");
 
 program
@@ -85,6 +99,33 @@ program
       kind: "run",
       workspaceRoot: options.workspace,
       prompt
+    });
+  });
+
+program
+  .command("sessions")
+  .option("-w, --workspace <path>", "Workspace root", process.cwd())
+  .action(async (options: { workspace: string }) => {
+    const manager = new SessionManager();
+    const sessions = await manager.listSessions({
+      workspaceRoot: options.workspace
+    });
+
+    renderSessions(sessions);
+  });
+
+program
+  .command("resume")
+  .argument("<threadId>", "Thread id to replay")
+  .option("-w, --workspace <path>", "Workspace root", process.cwd())
+  .action(async (threadId: string, options: { workspace: string }) => {
+    const manager = new SessionManager();
+
+    console.log(`Replaying session: ${threadId}`);
+    manager.subscribe(renderEvent);
+    await manager.resume({
+      workspaceRoot: options.workspace,
+      threadId
     });
   });
 

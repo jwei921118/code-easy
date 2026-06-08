@@ -124,6 +124,44 @@ describe("code-easy cli", () => {
     expect(stdout).toContain("Run completed: Workspace inspection completed.");
   });
 
+  it("lists sessions and resumes a stored event stream", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "README.md"), "SessionManager cli context\n", "utf8");
+
+    await execFileAsync("node", ["--import", "tsx", "src/index.ts", "run", "Find SessionManager", "--workspace", workspaceRoot], {
+      cwd: process.cwd(),
+      timeout: 10_000
+    });
+    const { stdout: sessionsStdout } = await execFileAsync(
+      "node",
+      ["--import", "tsx", "src/index.ts", "sessions", "--workspace", workspaceRoot],
+      {
+        cwd: process.cwd(),
+        timeout: 10_000
+      }
+    );
+    const threadId = sessionsStdout.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/)?.[0];
+
+    expect(sessionsStdout).toContain("Stored sessions:");
+    expect(sessionsStdout).toContain("Find SessionManager");
+    expect(sessionsStdout).toContain("completed");
+    expect(threadId).toBeDefined();
+
+    const { stdout: resumeStdout } = await execFileAsync(
+      "node",
+      ["--import", "tsx", "src/index.ts", "resume", threadId ?? "", "--workspace", workspaceRoot],
+      {
+        cwd: process.cwd(),
+        timeout: 10_000
+      }
+    );
+
+    expect(resumeStdout).toContain("Replaying session:");
+    expect(resumeStdout).toContain("Workspace context");
+    expect(resumeStdout).toContain("Run completed: Workspace inspection completed.");
+  });
+
   it("runs an approved command tool and renders command output", async () => {
     const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
     const input = JSON.stringify({

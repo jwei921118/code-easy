@@ -6,7 +6,13 @@ import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { SessionManager } from "./index.js";
 import type { AgentEvent } from "@code-easy/ui-protocol";
-import type { SessionStore, RunStartedRecord, RunCompletedRecord, StoredEventRecord } from "@code-easy/storage";
+import type {
+  SessionStore,
+  RunStartedRecord,
+  RunCompletedRecord,
+  StoredEventRecord,
+  StoredSessionSummary
+} from "@code-easy/storage";
 
 const execFileAsync = promisify(execFile);
 
@@ -28,6 +34,37 @@ class CapturingStore implements SessionStore {
       sequence: this.events.length + 1,
       event
     });
+  }
+
+  async listSessions(): Promise<StoredSessionSummary[]> {
+    return [
+      {
+        runId: "run-1",
+        threadId: "thread-1",
+        workspaceRoot: "/workspace",
+        prompt: "Find SessionManager",
+        status: "completed",
+        startedAt: "2026-06-08T00:00:00.000Z",
+        summary: "Workspace inspection completed."
+      }
+    ];
+  }
+
+  async listEvents(runId?: string): Promise<StoredEventRecord[]> {
+    if (this.events.length > 0) {
+      return this.events.filter((record) => runId === undefined || record.event.runId === runId);
+    }
+
+    return [
+      {
+        sequence: 1,
+        event: {
+          type: "run.completed",
+          runId: "run-1",
+          summary: "Workspace inspection completed."
+        }
+      }
+    ];
   }
 }
 
@@ -121,6 +158,36 @@ describe("SessionManager", () => {
         summary: "Workspace inspection completed."
       })
     ]);
+  });
+
+  it("lists stored sessions and replays stored events by thread id", async () => {
+    const store = new CapturingStore();
+    const manager = new SessionManager({ store });
+    const replayed: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      replayed.push(event);
+    });
+
+    const sessions = await manager.listSessions({
+      workspaceRoot: "/workspace"
+    });
+    await manager.resume({
+      workspaceRoot: "/workspace",
+      threadId: "thread-1"
+    });
+
+    expect(sessions).toEqual([
+      expect.objectContaining({
+        threadId: "thread-1",
+        prompt: "Find SessionManager",
+        status: "completed"
+      })
+    ]);
+    expect(replayed.at(-1)).toMatchObject({
+      type: "run.completed",
+      runId: "run-1"
+    });
   });
 
   it("runs default read tools through the permissioned executor", async () => {

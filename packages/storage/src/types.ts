@@ -21,8 +21,22 @@ export type StoredEventRecord = {
   event: AgentEvent;
 };
 
+export type StoredSessionSummary = {
+  runId: string;
+  threadId: string;
+  workspaceRoot: string;
+  prompt: string;
+  status: "started" | "completed" | "failed";
+  startedAt: string;
+  completedAt?: string;
+  summary?: string;
+  error?: string;
+};
+
 export interface SessionStore {
   recordRunStarted(record: RunStartedRecord): Promise<void>;
   recordRunCompleted(record: RunCompletedRecord): Promise<void>;
   recordEvent(event: AgentEvent): Promise<void>;
+  listSessions(): Promise<StoredSessionSummary[]>;
+  listEvents(runId?: string): Promise<StoredEventRecord[]>;
 }

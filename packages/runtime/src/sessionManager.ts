@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { createCodeEasyGraph } from "@code-easy/agent-core";
-import { FileSessionStore, type SessionStore } from "@code-easy/storage";
+import { FileSessionStore, type SessionStore, type StoredSessionSummary } from "@code-easy/storage";
 import { RuntimeCommandSchema, type AgentEvent, type RunCommand } from "@code-easy/ui-protocol";
 import { AgentEventBus } from "./eventBus.js";
 import { PermissionedToolExecutor, type ToolExecutionOutcome } from "./toolExecutor.js";
@@ -22,6 +22,14 @@ export type RunToolCommand = {
 
 export type RunToolResult = RunResult & {
   outcome: ToolExecutionOutcome;
+};
+
+export type WorkspaceSessionCommand = {
+  workspaceRoot: string;
+};
+
+export type ResumeSessionCommand = WorkspaceSessionCommand & {
+  threadId: string;
 };
 
 export type SessionManagerOptions = {
@@ -301,6 +309,30 @@ export class SessionManager {
     } finally {
       persist.unsubscribe();
     }
+  }
+
+  async listSessions(command: WorkspaceSessionCommand): Promise<StoredSessionSummary[]> {
+    return (await this.getStore(command.workspaceRoot)?.listSessions()) ?? [];
+  }
+
+  async resume(command: ResumeSessionCommand): Promise<StoredSessionSummary> {
+    const store = this.getStore(command.workspaceRoot);
+    if (!store) {
+      throw new Error("Session storage is disabled.");
+    }
+
+    const sessions = await store.listSessions();
+    const session = sessions.find((candidate) => candidate.threadId === command.threadId);
+    if (!session) {
+      throw new Error(`Unknown thread: ${command.threadId}`);
+    }
+
+    const events = await store.listEvents(session.runId);
+    for (const record of events) {
+      this.events.publish(record.event);
+    }
+
+    return session;
   }
 
   private getStore(workspaceRoot: string): SessionStore | undefined {

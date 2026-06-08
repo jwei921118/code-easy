@@ -72,6 +72,53 @@ describe("FileSessionStore", () => {
     expect(eventLines.trim().split("\n")).toHaveLength(2);
   });
 
+  it("lists sessions with completion details first by newest start time", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "code-easy-store-"));
+    const store = new FileSessionStore(root);
+
+    await store.recordRunStarted({
+      runId: "run-old",
+      threadId: "thread-old",
+      workspaceRoot: "/workspace",
+      prompt: "Old task",
+      startedAt: "2026-06-08T00:00:00.000Z"
+    });
+    await store.recordRunStarted({
+      runId: "run-new",
+      threadId: "thread-new",
+      workspaceRoot: "/workspace",
+      prompt: "New task",
+      startedAt: "2026-06-08T00:01:00.000Z"
+    });
+    await store.recordRunCompleted({
+      runId: "run-new",
+      status: "completed",
+      completedAt: "2026-06-08T00:01:01.000Z",
+      summary: "New task done."
+    });
+
+    await expect(store.listSessions()).resolves.toEqual([
+      {
+        runId: "run-new",
+        threadId: "thread-new",
+        workspaceRoot: "/workspace",
+        prompt: "New task",
+        status: "completed",
+        startedAt: "2026-06-08T00:01:00.000Z",
+        completedAt: "2026-06-08T00:01:01.000Z",
+        summary: "New task done."
+      },
+      {
+        runId: "run-old",
+        threadId: "thread-old",
+        workspaceRoot: "/workspace",
+        prompt: "Old task",
+        status: "started",
+        startedAt: "2026-06-08T00:00:00.000Z"
+      }
+    ]);
+  });
+
   it("keeps default .code-easy local storage out of git status", async () => {
     const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-store-git-"));
     await execFileAsync("git", ["init"], { cwd: workspaceRoot });
