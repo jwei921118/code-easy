@@ -116,16 +116,18 @@ program
 
 program
   .command("resume")
-  .argument("<threadId>", "Thread id to replay")
+  .argument("<threadId>", "Thread id to replay or continue")
+  .argument("[prompt]", "Optional task to continue on this thread")
   .option("-w, --workspace <path>", "Workspace root", process.cwd())
-  .action(async (threadId: string, options: { workspace: string }) => {
+  .action(async (threadId: string, prompt: string | undefined, options: { workspace: string }) => {
     const manager = new SessionManager();
 
-    console.log(`Replaying session: ${threadId}`);
+    console.log(`${prompt === undefined ? "Replaying" : "Continuing"} session: ${threadId}`);
     manager.subscribe(renderEvent);
     await manager.resume({
       workspaceRoot: options.workspace,
-      threadId
+      threadId,
+      prompt
     });
   });
 

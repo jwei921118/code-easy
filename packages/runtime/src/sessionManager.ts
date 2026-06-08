@@ -30,6 +30,7 @@ export type WorkspaceSessionCommand = {
 
 export type ResumeSessionCommand = WorkspaceSessionCommand & {
   threadId: string;
+  prompt?: string;
 };
 
 export type SessionManagerOptions = {
@@ -315,7 +316,7 @@ export class SessionManager {
     return (await this.getStore(command.workspaceRoot)?.listSessions()) ?? [];
   }
 
-  async resume(command: ResumeSessionCommand): Promise<StoredSessionSummary> {
+  async resume(command: ResumeSessionCommand): Promise<StoredSessionSummary | RunResult> {
     const store = this.getStore(command.workspaceRoot);
     if (!store) {
       throw new Error("Session storage is disabled.");
@@ -325,6 +326,15 @@ export class SessionManager {
     const session = sessions.find((candidate) => candidate.threadId === command.threadId);
     if (!session) {
       throw new Error(`Unknown thread: ${command.threadId}`);
+    }
+
+    if (command.prompt !== undefined) {
+      return this.run({
+        kind: "run",
+        workspaceRoot: command.workspaceRoot,
+        threadId: command.threadId,
+        prompt: command.prompt
+      });
     }
 
     const events = await store.listEvents(session.runId);

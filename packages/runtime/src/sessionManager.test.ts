@@ -190,6 +190,33 @@ describe("SessionManager", () => {
     });
   });
 
+  it("continues a stored session with a new prompt on the same thread", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-continue-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "README.md"), "Followup context\n", "utf8");
+    const store = new CapturingStore();
+    const manager = new SessionManager({ store });
+
+    const result = await manager.resume({
+      workspaceRoot,
+      threadId: "thread-1",
+      prompt: "Find Followup"
+    });
+
+    expect(result).toMatchObject({
+      threadId: "thread-1"
+    });
+    expect(store.startedRuns.at(-1)).toMatchObject({
+      threadId: "thread-1",
+      prompt: "Find Followup"
+    });
+    expect(store.events.map((record) => record.event.type)).toContain("message.delta");
+    expect(store.completedRuns.at(-1)).toMatchObject({
+      status: "completed",
+      summary: "Workspace inspection completed."
+    });
+  });
+
   it("runs default read tools through the permissioned executor", async () => {
     const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-runtime-"));
     await writeFile(path.join(workspaceRoot, "README.md"), "hello runtime\n", "utf8");
