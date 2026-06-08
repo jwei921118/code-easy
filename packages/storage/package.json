@@ -1,5 +1,5 @@
 {
-  "name": "@code-easy/runtime",
+  "name": "@code-easy/storage",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -18,10 +18,6 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@code-easy/agent-core": "workspace:*",
-    "@code-easy/permissions": "workspace:*",
-    "@code-easy/storage": "workspace:*",
-    "@code-easy/tools": "workspace:*",
     "@code-easy/ui-protocol": "workspace:*"
   },
   "devDependencies": {

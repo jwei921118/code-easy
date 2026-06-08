@@ -6,8 +6,30 @@ import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { SessionManager } from "./index.js";
 import type { AgentEvent } from "@code-easy/ui-protocol";
+import type { SessionStore, RunStartedRecord, RunCompletedRecord, StoredEventRecord } from "@code-easy/storage";
 
 const execFileAsync = promisify(execFile);
+
+class CapturingStore implements SessionStore {
+  readonly startedRuns: RunStartedRecord[] = [];
+  readonly completedRuns: RunCompletedRecord[] = [];
+  readonly events: StoredEventRecord[] = [];
+
+  async recordRunStarted(record: RunStartedRecord): Promise<void> {
+    this.startedRuns.push(record);
+  }
+
+  async recordRunCompleted(record: RunCompletedRecord): Promise<void> {
+    this.completedRuns.push(record);
+  }
+
+  async recordEvent(event: AgentEvent): Promise<void> {
+    this.events.push({
+      sequence: this.events.length + 1,
+      event
+    });
+  }
+}
 
 describe("SessionManager", () => {
   it("emits run lifecycle events", async () => {
@@ -64,6 +86,41 @@ describe("SessionManager", () => {
       type: "run.completed",
       summary: "Workspace inspection completed."
     });
+  });
+
+  it("persists run metadata and event stream when a session store is configured", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-persist-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "README.md"), "SessionManager persistence context\n", "utf8");
+    const store = new CapturingStore();
+    const manager = new SessionManager({ store });
+
+    const result = await manager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Find SessionManager"
+    });
+
+    expect(store.startedRuns).toEqual([
+      expect.objectContaining({
+        runId: result.runId,
+        threadId: result.threadId,
+        workspaceRoot,
+        prompt: "Find SessionManager"
+      })
+    ]);
+    expect(store.events.map((record) => record.event.type)).toContain("message.delta");
+    expect(store.events.at(-1)?.event).toMatchObject({
+      type: "run.completed",
+      runId: result.runId
+    });
+    expect(store.completedRuns).toEqual([
+      expect.objectContaining({
+        runId: result.runId,
+        status: "completed",
+        summary: "Workspace inspection completed."
+      })
+    ]);
   });
 
   it("runs default read tools through the permissioned executor", async () => {

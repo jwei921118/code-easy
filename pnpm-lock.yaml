@@ -89,9 +89,25 @@ importers:
       '@code-easy/permissions':
         specifier: workspace:*
         version: link:../permissions
+      '@code-easy/storage':
+        specifier: workspace:*
+        version: link:../storage
       '@code-easy/tools':
         specifier: workspace:*
         version: link:../tools
+      '@code-easy/ui-protocol':
+        specifier: workspace:*
+        version: link:../ui-protocol
+    devDependencies:
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.4(@types/node@24.12.4)(tsx@4.22.3)
+
+  packages/storage:
+    dependencies:
       '@code-easy/ui-protocol':
         specifier: workspace:*
         version: link:../ui-protocol

@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { createCodeEasyGraph } from "@code-easy/agent-core";
+import { FileSessionStore, type SessionStore } from "@code-easy/storage";
 import { RuntimeCommandSchema, type AgentEvent, type RunCommand } from "@code-easy/ui-protocol";
 import { AgentEventBus } from "./eventBus.js";
 import { PermissionedToolExecutor, type ToolExecutionOutcome } from "./toolExecutor.js";
@@ -24,6 +26,7 @@ export type RunToolResult = RunResult & {
 
 export type SessionManagerOptions = {
   tools?: ToolRegistry;
+  store?: SessionStore | false;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -74,9 +77,11 @@ function summarizeSearch(pattern: string, output: unknown): string {
 export class SessionManager {
   private readonly events = new AgentEventBus();
   private readonly tools: ToolRegistry;
+  private readonly configuredStore?: SessionStore | false;
 
   constructor(options: SessionManagerOptions = {}) {
     this.tools = options.tools ?? createDefaultToolRegistry();
+    this.configuredStore = options.store;
   }
 
   subscribe(handler: (event: AgentEvent) => void): () => void {
@@ -92,6 +97,16 @@ export class SessionManager {
 
     const runId = randomUUID();
     const threadId = command.threadId ?? randomUUID();
+    const store = this.getStore(command.workspaceRoot);
+    const persist = this.captureStoredEvents(store);
+
+    await store?.recordRunStarted({
+      runId,
+      threadId,
+      workspaceRoot: command.workspaceRoot,
+      prompt: command.prompt,
+      startedAt: new Date().toISOString()
+    });
 
     this.events.publish({ type: "run.started", runId, threadId });
     this.events.publish({ type: "node.started", runId, node: "intake" });
@@ -132,24 +147,42 @@ export class SessionManager {
           result.messages.at(-1) ?? "Runtime completed."
         ].join("\n\n")
       });
+      const summary = "Workspace inspection completed.";
       this.events.publish({
         type: "run.completed",
         runId,
-        summary: "Workspace inspection completed."
+        summary
       });
+      await store?.recordRunCompleted({
+        runId,
+        status: "completed",
+        completedAt: new Date().toISOString(),
+        summary
+      });
+      await persist.flush();
 
       return { runId, threadId };
     } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
       this.events.publish({
         type: "run.failed",
         runId,
         error: {
           category: "runtime_failed",
           message: "Session run failed.",
-          detail: error instanceof Error ? error.message : String(error)
+          detail
         }
       });
+      await store?.recordRunCompleted({
+        runId,
+        status: "failed",
+        completedAt: new Date().toISOString(),
+        error: detail
+      });
+      await persist.flush();
       throw error;
+    } finally {
+      persist.unsubscribe();
     }
   }
 
@@ -190,6 +223,16 @@ export class SessionManager {
     const runId = randomUUID();
     const threadId = command.threadId ?? randomUUID();
     const tool = this.tools.get(command.toolName);
+    const store = this.getStore(command.workspaceRoot);
+    const persist = this.captureStoredEvents(store);
+
+    await store?.recordRunStarted({
+      runId,
+      threadId,
+      workspaceRoot: command.workspaceRoot,
+      prompt: `tool:${command.toolName}`,
+      startedAt: new Date().toISOString()
+    });
 
     this.events.publish({ type: "run.started", runId, threadId });
 
@@ -199,6 +242,14 @@ export class SessionManager {
         message: `Unknown tool: ${command.toolName}`
       };
       this.events.publish({ type: "run.failed", runId, error });
+      await store?.recordRunCompleted({
+        runId,
+        status: "failed",
+        completedAt: new Date().toISOString(),
+        error: error.message
+      });
+      await persist.flush();
+      persist.unsubscribe();
       throw new Error(error.message);
     }
 
@@ -218,20 +269,67 @@ export class SessionManager {
           runId,
           summary: `Tool ${command.toolName} completed.`
         });
+        await store?.recordRunCompleted({
+          runId,
+          status: "completed",
+          completedAt: new Date().toISOString(),
+          summary: `Tool ${command.toolName} completed.`
+        });
       }
 
+      await persist.flush();
       return { runId, threadId, outcome };
     } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
       this.events.publish({
         type: "run.failed",
         runId,
         error: {
           category: "runtime_failed",
           message: `Tool ${command.toolName} failed.`,
-          detail: error instanceof Error ? error.message : String(error)
+          detail
         }
       });
+      await store?.recordRunCompleted({
+        runId,
+        status: "failed",
+        completedAt: new Date().toISOString(),
+        error: detail
+      });
+      await persist.flush();
       throw error;
+    } finally {
+      persist.unsubscribe();
     }
+  }
+
+  private getStore(workspaceRoot: string): SessionStore | undefined {
+    if (this.configuredStore === false) return undefined;
+    if (this.configuredStore) return this.configuredStore;
+    return new FileSessionStore(path.join(workspaceRoot, ".code-easy", "local"));
+  }
+
+  private captureStoredEvents(store: SessionStore | undefined): {
+    flush: () => Promise<void>;
+    unsubscribe: () => void;
+  } {
+    if (!store) {
+      return {
+        flush: async () => {},
+        unsubscribe: () => {}
+      };
+    }
+
+    const writes: Promise<void>[] = [];
+    const unsubscribe = this.events.subscribe((event) => {
+      writes.push(store.recordEvent(event));
+    });
+
+    return {
+      flush: async () => {
+        await Promise.all(writes);
+      },
+      unsubscribe
+    };
   }
 }
