@@ -4,6 +4,7 @@ import { createCodeEasyGraph } from "@code-easy/agent-core";
 import { FileSessionStore, type SessionStore, type StoredSessionSummary } from "@code-easy/storage";
 import { RuntimeCommandSchema, type AgentEvent, type RunCommand } from "@code-easy/ui-protocol";
 import { AgentEventBus } from "./eventBus.js";
+import { buildWorkspaceContextMessages, type ModelProvider } from "./modelProvider.js";
 import { PermissionedToolExecutor, type ToolExecutionOutcome } from "./toolExecutor.js";
 import { createDefaultToolRegistry, type ToolRegistry } from "./toolRegistry.js";
 
@@ -36,6 +37,8 @@ export type ResumeSessionCommand = WorkspaceSessionCommand & {
 export type SessionManagerOptions = {
   tools?: ToolRegistry;
   store?: SessionStore | false;
+  modelProvider?: ModelProvider | false;
+  model?: string;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -46,7 +49,7 @@ function extractSearchPattern(prompt: string): string {
   const quoted = prompt.match(/["']([^"']+)["']/);
   if (quoted?.[1]) return quoted[1];
 
-  const stopWords = new Set(["find", "search", "inspect", "check", "project", "workspace", "code", "for", "the"]);
+  const stopWords = new Set(["find", "search", "inspect", "check", "explain", "project", "workspace", "code", "for", "the"]);
   const tokens = prompt.match(/[A-Za-z0-9_-]{3,}/g) ?? [];
   const candidate = tokens.find((token) => !stopWords.has(token.toLowerCase()));
 
@@ -87,10 +90,14 @@ export class SessionManager {
   private readonly events = new AgentEventBus();
   private readonly tools: ToolRegistry;
   private readonly configuredStore?: SessionStore | false;
+  private readonly modelProvider?: ModelProvider | false;
+  private readonly model: string;
 
   constructor(options: SessionManagerOptions = {}) {
     this.tools = options.tools ?? createDefaultToolRegistry();
     this.configuredStore = options.store;
+    this.modelProvider = options.modelProvider;
+    this.model = options.model ?? "gpt-5-mini";
   }
 
   subscribe(handler: (event: AgentEvent) => void): () => void {
@@ -143,20 +150,36 @@ export class SessionManager {
         maxMatches: 10,
         caseSensitive: true
       });
+      const gitStatusSummary = summarizeGitStatus(gitStatus);
+      const fileSummary = summarizeFiles(fileList);
+      const searchSummary = summarizeSearch(searchPattern, searchResults);
+      const graphMessage = result.messages.at(-1) ?? "Runtime completed.";
+      let messageText: string;
+      let summary: string;
+
+      if (this.modelProvider) {
+        const modelResult = await this.modelProvider.generateText({
+          model: this.model,
+          messages: buildWorkspaceContextMessages({
+            userPrompt: command.prompt,
+            gitStatusSummary,
+            fileSummary,
+            searchSummary
+          })
+        });
+        messageText = modelResult.text;
+        summary = "Model response completed.";
+      } else {
+        messageText = ["Workspace context", gitStatusSummary, fileSummary, searchSummary, graphMessage].join("\n\n");
+        summary = "Workspace inspection completed.";
+      }
 
       this.events.publish({ type: "node.completed", runId, node: "context_builder" });
       this.events.publish({
         type: "message.delta",
         runId,
-        text: [
-          "Workspace context",
-          summarizeGitStatus(gitStatus),
-          summarizeFiles(fileList),
-          summarizeSearch(searchPattern, searchResults),
-          result.messages.at(-1) ?? "Runtime completed."
-        ].join("\n\n")
+        text: messageText
       });
-      const summary = "Workspace inspection completed.";
       this.events.publish({
         type: "run.completed",
         runId,

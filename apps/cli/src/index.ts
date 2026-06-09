@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 import { createInterface } from "node:readline/promises";
 import { program } from "commander";
-import { SessionManager } from "@code-easy/runtime";
+import { createModelProviderFromConfig, loadModelConfig, SessionManager } from "@code-easy/runtime";
 import type { AgentEvent } from "@code-easy/ui-protocol";
+
+type ModelOptions = {
+  model?: string | false;
+};
 
 function parseJsonInput(input: string): unknown {
   try {
@@ -24,6 +28,18 @@ async function promptForApproval(toolName: string): Promise<boolean> {
   } finally {
     readline.close();
   }
+}
+
+function createSessionManager(options: ModelOptions = {}): SessionManager {
+  const config = loadModelConfig({
+    modelOverride: typeof options.model === "string" ? options.model : undefined,
+    disabled: options.model === false
+  });
+
+  return new SessionManager({
+    modelProvider: createModelProviderFromConfig(config),
+    model: config.enabled ? config.model : undefined
+  });
 }
 
 function renderEvent(event: AgentEvent): void {
@@ -93,8 +109,10 @@ program
   .command("run")
   .argument("<prompt>", "Task to run")
   .option("-w, --workspace <path>", "Workspace root", process.cwd())
-  .action(async (prompt: string, options: { workspace: string }) => {
-    const manager = new SessionManager();
+  .option("--model <model>", "Model name for configured provider")
+  .option("--no-model", "Disable model provider for this run")
+  .action(async (prompt: string, options: { workspace: string } & ModelOptions) => {
+    const manager = createSessionManager(options);
     manager.subscribe(renderEvent);
 
     await manager.run({
@@ -121,8 +139,10 @@ program
   .argument("<threadId>", "Thread id to replay or continue")
   .argument("[prompt]", "Optional task to continue on this thread")
   .option("-w, --workspace <path>", "Workspace root", process.cwd())
-  .action(async (threadId: string, prompt: string | undefined, options: { workspace: string }) => {
-    const manager = new SessionManager();
+  .option("--model <model>", "Model name for configured provider")
+  .option("--no-model", "Disable model provider for this run")
+  .action(async (threadId: string, prompt: string | undefined, options: { workspace: string } & ModelOptions) => {
+    const manager = createSessionManager(options);
 
     console.log(`${prompt === undefined ? "Replaying" : "Continuing"} session: ${threadId}`);
     manager.subscribe(renderEvent);

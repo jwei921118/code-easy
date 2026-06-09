@@ -234,6 +234,75 @@ describe("SessionManager", () => {
     });
   });
 
+  it("uses an injected model provider after gathering workspace context", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-model-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "README.md"), "Model provider context\n", "utf8");
+    const calls: unknown[] = [];
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText(input) {
+          calls.push(input);
+          return { text: "fake model answer" };
+        }
+      },
+      model: "fake-model"
+    });
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    await manager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Explain Model provider"
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(JSON.stringify(calls[0])).toContain("Model provider context");
+    expect(events.find((event) => event.type === "message.delta")).toMatchObject({
+      type: "message.delta",
+      text: "fake model answer"
+    });
+    expect(events.at(-1)).toMatchObject({
+      type: "run.completed",
+      summary: "Model response completed."
+    });
+  });
+
+  it("keeps deterministic workspace inspection when modelProvider is false", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-no-model-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "README.md"), "Offline context\n", "utf8");
+    const manager = new SessionManager({ modelProvider: false });
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    await manager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Find Offline"
+    });
+
+    const messageText = events
+      .filter((event) => event.type === "message.delta")
+      .map((event) => event.text)
+      .join("\n");
+
+    expect(messageText).toContain("Workspace context");
+    expect(messageText).toContain("Runtime initialized.");
+    expect(events.at(-1)).toMatchObject({
+      type: "run.completed",
+      summary: "Workspace inspection completed."
+    });
+  });
+
   it("runs default read tools through the permissioned executor", async () => {
     const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-runtime-"));
     await writeFile(path.join(workspaceRoot, "README.md"), "hello runtime\n", "utf8");

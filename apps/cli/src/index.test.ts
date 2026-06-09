@@ -124,6 +124,24 @@ describe("code-easy cli", () => {
     expect(stdout).toContain("Run completed: Workspace inspection completed.");
   });
 
+  it("keeps run deterministic when --no-model is passed", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "README.md"), "No model cli context\n", "utf8");
+
+    const { stdout } = await execFileAsync(
+      "node",
+      ["--import", "tsx", "src/index.ts", "run", "Find No", "--workspace", workspaceRoot, "--no-model"],
+      {
+        cwd: process.cwd(),
+        timeout: 10_000
+      }
+    );
+
+    expect(stdout).toContain("Workspace context");
+    expect(stdout).toContain("Run completed: Workspace inspection completed.");
+  });
+
   it("lists sessions and resumes a stored event stream", async () => {
     const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
     await execFileAsync("git", ["init"], { cwd: workspaceRoot });

@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+Status: completed and synchronized on 2026-06-10. The implementation has advanced beyond this original foundation slice with session replay/resume, local event persistence, approval-gated command execution, and additional workspace tools.
+
 **Goal:** Build the first executable slice of Code Easy: a pnpm TypeScript monorepo with shared UI protocol, backend permission/tool/runtime packages, a minimal LangGraph core, and a CLI that can start a streamed local session.
 
 **Architecture:** This plan implements the spec's frontend/backend boundary by making `apps/cli` depend only on `packages/runtime` and `packages/ui-protocol`, while backend side effects live under `packages/tools`, `packages/permissions`, `packages/storage`, and `packages/agent-core`. The first runtime is intentionally small: it emits typed events, validates command inputs, calls a minimal LangGraph graph, and leaves room for approvals and SQLite in the next plan.
@@ -63,7 +65,7 @@ The desktop app is intentionally excluded from this plan. It will consume the sa
 - Create: `tsconfig.base.json`
 - Create: `.gitignore`
 
-- [ ] **Step 1: Create root `package.json`**
+- [x] **Step 1: Create root `package.json`**
 
 ```json
 {
@@ -87,7 +89,7 @@ The desktop app is intentionally excluded from this plan. It will consume the sa
 }
 ```
 
-- [ ] **Step 2: Create `pnpm-workspace.yaml`**
+- [x] **Step 2: Create `pnpm-workspace.yaml`**
 
 ```yaml
 packages:
@@ -95,7 +97,7 @@ packages:
   - "packages/*"
 ```
 
-- [ ] **Step 3: Create `tsconfig.base.json`**
+- [x] **Step 3: Create `tsconfig.base.json`**
 
 ```json
 {
@@ -117,7 +119,7 @@ packages:
 }
 ```
 
-- [ ] **Step 4: Create `.gitignore`**
+- [x] **Step 4: Create `.gitignore`**
 
 ```gitignore
 node_modules/
@@ -132,13 +134,13 @@ coverage/
 .code-easy/local/
 ```
 
-- [ ] **Step 5: Install dependencies**
+- [x] **Step 5: Install dependencies**
 
 Run: `pnpm install`
 
 Expected: pnpm creates `pnpm-lock.yaml` and installs all root dev dependencies without errors.
 
-- [ ] **Step 6: Commit foundation files**
+- [x] **Step 6: Commit foundation files**
 
 ```bash
 git add package.json pnpm-workspace.yaml tsconfig.base.json .gitignore pnpm-lock.yaml
@@ -157,13 +159,13 @@ git commit -m "chore: initialize typescript workspace"
 - Create: `packages/ui-protocol/src/events.test.ts`
 - Modify: `package.json`
 
-- [ ] **Step 1: Add runtime schema dependency**
+- [x] **Step 1: Add runtime schema dependency**
 
 Run: `pnpm add -w zod`
 
 Expected: root `package.json` includes `zod` and `pnpm-lock.yaml` updates.
 
-- [ ] **Step 2: Create `packages/ui-protocol/package.json`**
+- [x] **Step 2: Create `packages/ui-protocol/package.json`**
 
 ```json
 {
@@ -195,7 +197,7 @@ Expected: root `package.json` includes `zod` and `pnpm-lock.yaml` updates.
 }
 ```
 
-- [ ] **Step 3: Create `packages/ui-protocol/tsconfig.json`**
+- [x] **Step 3: Create `packages/ui-protocol/tsconfig.json`**
 
 ```json
 {
@@ -209,7 +211,7 @@ Expected: root `package.json` includes `zod` and `pnpm-lock.yaml` updates.
 }
 ```
 
-- [ ] **Step 4: Create `packages/ui-protocol/src/events.ts`**
+- [x] **Step 4: Create `packages/ui-protocol/src/events.ts`**
 
 ```ts
 import { z } from "zod";
@@ -283,7 +285,7 @@ export type ApprovalDecision = z.infer<typeof ApprovalDecisionSchema>;
 export type AgentEvent = z.infer<typeof AgentEventSchema>;
 ```
 
-- [ ] **Step 5: Create `packages/ui-protocol/src/commands.ts`**
+- [x] **Step 5: Create `packages/ui-protocol/src/commands.ts`**
 
 ```ts
 import { z } from "zod";
@@ -326,14 +328,14 @@ export type ApproveCommand = z.infer<typeof ApproveCommandSchema>;
 export type RuntimeCommand = z.infer<typeof RuntimeCommandSchema>;
 ```
 
-- [ ] **Step 6: Create `packages/ui-protocol/src/index.ts`**
+- [x] **Step 6: Create `packages/ui-protocol/src/index.ts`**
 
 ```ts
 export * from "./commands.js";
 export * from "./events.js";
 ```
 
-- [ ] **Step 7: Create `packages/ui-protocol/src/events.test.ts`**
+- [x] **Step 7: Create `packages/ui-protocol/src/events.test.ts`**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -362,19 +364,19 @@ describe("ui protocol", () => {
 });
 ```
 
-- [ ] **Step 8: Refresh workspace links**
+- [x] **Step 8: Refresh workspace links**
 
 Run: `pnpm install`
 
 Expected: pnpm links `@code-easy/ui-protocol` as a workspace package and completes without errors.
 
-- [ ] **Step 9: Run UI protocol tests**
+- [x] **Step 9: Run UI protocol tests**
 
 Run: `pnpm --filter @code-easy/ui-protocol test`
 
 Expected: both tests pass.
 
-- [ ] **Step 10: Commit UI protocol**
+- [x] **Step 10: Commit UI protocol**
 
 ```bash
 git add package.json pnpm-lock.yaml packages/ui-protocol
@@ -391,7 +393,7 @@ git commit -m "feat: add shared ui protocol"
 - Create: `packages/permissions/src/index.ts`
 - Create: `packages/permissions/src/risks.test.ts`
 
-- [ ] **Step 1: Create `packages/permissions/package.json`**
+- [x] **Step 1: Create `packages/permissions/package.json`**
 
 ```json
 {
@@ -420,7 +422,7 @@ git commit -m "feat: add shared ui protocol"
 }
 ```
 
-- [ ] **Step 2: Create `packages/permissions/tsconfig.json`**
+- [x] **Step 2: Create `packages/permissions/tsconfig.json`**
 
 ```json
 {
@@ -434,7 +436,7 @@ git commit -m "feat: add shared ui protocol"
 }
 ```
 
-- [ ] **Step 3: Create `packages/permissions/src/risks.ts`**
+- [x] **Step 3: Create `packages/permissions/src/risks.ts`**
 
 ```ts
 export type ToolRisk = "read" | "write" | "execute" | "network" | "destructive" | "external";
@@ -471,13 +473,13 @@ export function decidePermission(toolName: string): PermissionDecision {
 }
 ```
 
-- [ ] **Step 4: Create `packages/permissions/src/index.ts`**
+- [x] **Step 4: Create `packages/permissions/src/index.ts`**
 
 ```ts
 export * from "./risks.js";
 ```
 
-- [ ] **Step 5: Create `packages/permissions/src/risks.test.ts`**
+- [x] **Step 5: Create `packages/permissions/src/risks.test.ts`**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -500,19 +502,19 @@ describe("permission policy", () => {
 });
 ```
 
-- [ ] **Step 6: Refresh workspace links**
+- [x] **Step 6: Refresh workspace links**
 
 Run: `pnpm install`
 
 Expected: pnpm links `@code-easy/permissions` as a workspace package and completes without errors.
 
-- [ ] **Step 7: Run permission tests**
+- [x] **Step 7: Run permission tests**
 
 Run: `pnpm --filter @code-easy/permissions test`
 
 Expected: all permission tests pass.
 
-- [ ] **Step 8: Commit permission package**
+- [x] **Step 8: Commit permission package**
 
 ```bash
 git add packages/permissions
@@ -531,7 +533,7 @@ git commit -m "feat: add permission policy"
 - Create: `packages/tools/src/index.ts`
 - Create: `packages/tools/src/readFileTool.test.ts`
 
-- [ ] **Step 1: Create `packages/tools/package.json`**
+- [x] **Step 1: Create `packages/tools/package.json`**
 
 ```json
 {
@@ -564,7 +566,7 @@ git commit -m "feat: add permission policy"
 }
 ```
 
-- [ ] **Step 2: Create `packages/tools/tsconfig.json`**
+- [x] **Step 2: Create `packages/tools/tsconfig.json`**
 
 ```json
 {
@@ -578,7 +580,7 @@ git commit -m "feat: add permission policy"
 }
 ```
 
-- [ ] **Step 3: Create `packages/tools/src/types.ts`**
+- [x] **Step 3: Create `packages/tools/src/types.ts`**
 
 ```ts
 import type { ToolRisk } from "@code-easy/permissions";
@@ -602,7 +604,7 @@ export type CodeEasyTool<TInputSchema extends z.ZodTypeAny, TOutput> = {
 };
 ```
 
-- [ ] **Step 4: Create `packages/tools/src/readFileTool.ts`**
+- [x] **Step 4: Create `packages/tools/src/readFileTool.ts`**
 
 ```ts
 import { readFile } from "node:fs/promises";
@@ -666,7 +668,7 @@ export const readFileTool: CodeEasyTool<typeof ReadFileInputSchema, ReadFileOutp
 };
 ```
 
-- [ ] **Step 5: Create `packages/tools/src/gitStatusTool.ts`**
+- [x] **Step 5: Create `packages/tools/src/gitStatusTool.ts`**
 
 ```ts
 import { execFile } from "node:child_process";
@@ -714,7 +716,7 @@ export const gitStatusTool: CodeEasyTool<typeof GitStatusInputSchema, GitStatusO
 };
 ```
 
-- [ ] **Step 6: Create `packages/tools/src/index.ts`**
+- [x] **Step 6: Create `packages/tools/src/index.ts`**
 
 ```ts
 export * from "./gitStatusTool.js";
@@ -722,7 +724,7 @@ export * from "./readFileTool.js";
 export * from "./types.js";
 ```
 
-- [ ] **Step 7: Create `packages/tools/src/readFileTool.test.ts`**
+- [x] **Step 7: Create `packages/tools/src/readFileTool.test.ts`**
 
 ```ts
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -758,19 +760,19 @@ describe("readFileTool", () => {
 });
 ```
 
-- [ ] **Step 8: Refresh workspace links**
+- [x] **Step 8: Refresh workspace links**
 
 Run: `pnpm install`
 
 Expected: pnpm links `@code-easy/tools` and its workspace dependencies without errors.
 
-- [ ] **Step 9: Run tool tests**
+- [x] **Step 9: Run tool tests**
 
 Run: `pnpm --filter @code-easy/tools test`
 
 Expected: both read file tests pass.
 
-- [ ] **Step 10: Commit read-only tool package**
+- [x] **Step 10: Commit read-only tool package**
 
 ```bash
 git add packages/tools
@@ -789,13 +791,13 @@ git commit -m "feat: add backend tool contracts"
 - Create: `packages/agent-core/src/index.ts`
 - Create: `packages/agent-core/src/graph.test.ts`
 
-- [ ] **Step 1: Add LangGraph dependency**
+- [x] **Step 1: Add LangGraph dependency**
 
 Run: `pnpm add -w @langchain/langgraph @langchain/core`
 
 Expected: root `package.json` and `pnpm-lock.yaml` include LangGraph packages.
 
-- [ ] **Step 2: Create `packages/agent-core/package.json`**
+- [x] **Step 2: Create `packages/agent-core/package.json`**
 
 ```json
 {
@@ -828,7 +830,7 @@ Expected: root `package.json` and `pnpm-lock.yaml` include LangGraph packages.
 }
 ```
 
-- [ ] **Step 3: Create `packages/agent-core/tsconfig.json`**
+- [x] **Step 3: Create `packages/agent-core/tsconfig.json`**
 
 ```json
 {
@@ -842,7 +844,7 @@ Expected: root `package.json` and `pnpm-lock.yaml` include LangGraph packages.
 }
 ```
 
-- [ ] **Step 4: Create `packages/agent-core/src/state.ts`**
+- [x] **Step 4: Create `packages/agent-core/src/state.ts`**
 
 ```ts
 import { Annotation } from "@langchain/langgraph";
@@ -871,7 +873,7 @@ export const AgentStateAnnotation = Annotation.Root({
 export type AgentState = typeof AgentStateAnnotation.State;
 ```
 
-- [ ] **Step 5: Create `packages/agent-core/src/graph.ts`**
+- [x] **Step 5: Create `packages/agent-core/src/graph.ts`**
 
 ```ts
 import { END, START, StateGraph } from "@langchain/langgraph";
@@ -899,14 +901,14 @@ export function createCodeEasyGraph() {
 }
 ```
 
-- [ ] **Step 6: Create `packages/agent-core/src/index.ts`**
+- [x] **Step 6: Create `packages/agent-core/src/index.ts`**
 
 ```ts
 export * from "./graph.js";
 export * from "./state.js";
 ```
 
-- [ ] **Step 7: Create `packages/agent-core/src/graph.test.ts`**
+- [x] **Step 7: Create `packages/agent-core/src/graph.test.ts`**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -932,19 +934,19 @@ describe("createCodeEasyGraph", () => {
 });
 ```
 
-- [ ] **Step 8: Refresh workspace links**
+- [x] **Step 8: Refresh workspace links**
 
 Run: `pnpm install`
 
 Expected: pnpm links `@code-easy/agent-core` and installs LangGraph dependencies without errors.
 
-- [ ] **Step 9: Run agent-core test**
+- [x] **Step 9: Run agent-core test**
 
 Run: `pnpm --filter @code-easy/agent-core test`
 
 Expected: graph smoke test passes.
 
-- [ ] **Step 10: Commit LangGraph core**
+- [x] **Step 10: Commit LangGraph core**
 
 ```bash
 git add package.json pnpm-lock.yaml packages/agent-core
@@ -962,7 +964,7 @@ git commit -m "feat: add minimal langgraph core"
 - Create: `packages/runtime/src/index.ts`
 - Create: `packages/runtime/src/sessionManager.test.ts`
 
-- [ ] **Step 1: Create `packages/runtime/package.json`**
+- [x] **Step 1: Create `packages/runtime/package.json`**
 
 ```json
 {
@@ -995,7 +997,7 @@ git commit -m "feat: add minimal langgraph core"
 }
 ```
 
-- [ ] **Step 2: Create `packages/runtime/tsconfig.json`**
+- [x] **Step 2: Create `packages/runtime/tsconfig.json`**
 
 ```json
 {
@@ -1009,7 +1011,7 @@ git commit -m "feat: add minimal langgraph core"
 }
 ```
 
-- [ ] **Step 3: Create `packages/runtime/src/eventBus.ts`**
+- [x] **Step 3: Create `packages/runtime/src/eventBus.ts`**
 
 ```ts
 import type { AgentEvent } from "@code-easy/ui-protocol";
@@ -1034,7 +1036,7 @@ export class AgentEventBus {
 }
 ```
 
-- [ ] **Step 4: Create `packages/runtime/src/sessionManager.ts`**
+- [x] **Step 4: Create `packages/runtime/src/sessionManager.ts`**
 
 ```ts
 import { randomUUID } from "node:crypto";
@@ -1103,14 +1105,14 @@ export class SessionManager {
 }
 ```
 
-- [ ] **Step 5: Create `packages/runtime/src/index.ts`**
+- [x] **Step 5: Create `packages/runtime/src/index.ts`**
 
 ```ts
 export * from "./eventBus.js";
 export * from "./sessionManager.js";
 ```
 
-- [ ] **Step 6: Create `packages/runtime/src/sessionManager.test.ts`**
+- [x] **Step 6: Create `packages/runtime/src/sessionManager.test.ts`**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -1142,19 +1144,19 @@ describe("SessionManager", () => {
 });
 ```
 
-- [ ] **Step 7: Refresh workspace links**
+- [x] **Step 7: Refresh workspace links**
 
 Run: `pnpm install`
 
 Expected: pnpm links `@code-easy/runtime` and local package dependencies without errors.
 
-- [ ] **Step 8: Run runtime test**
+- [x] **Step 8: Run runtime test**
 
 Run: `pnpm --filter @code-easy/runtime test`
 
 Expected: lifecycle event test passes.
 
-- [ ] **Step 9: Commit runtime session manager**
+- [x] **Step 9: Commit runtime session manager**
 
 ```bash
 git add packages/runtime
@@ -1170,13 +1172,13 @@ git commit -m "feat: add runtime session manager"
 - Create: `apps/cli/tsconfig.json`
 - Create: `apps/cli/src/index.ts`
 
-- [ ] **Step 1: Add CLI dependency**
+- [x] **Step 1: Add CLI dependency**
 
 Run: `pnpm add -w commander`
 
 Expected: root `package.json` and `pnpm-lock.yaml` include `commander`.
 
-- [ ] **Step 2: Create `apps/cli/package.json`**
+- [x] **Step 2: Create `apps/cli/package.json`**
 
 ```json
 {
@@ -1206,7 +1208,7 @@ Expected: root `package.json` and `pnpm-lock.yaml` include `commander`.
 }
 ```
 
-- [ ] **Step 3: Create `apps/cli/tsconfig.json`**
+- [x] **Step 3: Create `apps/cli/tsconfig.json`**
 
 ```json
 {
@@ -1220,7 +1222,7 @@ Expected: root `package.json` and `pnpm-lock.yaml` include `commander`.
 }
 ```
 
-- [ ] **Step 4: Create `apps/cli/src/index.ts`**
+- [x] **Step 4: Create `apps/cli/src/index.ts`**
 
 ```ts
 #!/usr/bin/env node
@@ -1280,13 +1282,13 @@ program.action(() => {
 await program.parseAsync(process.argv);
 ```
 
-- [ ] **Step 5: Refresh workspace links**
+- [x] **Step 5: Refresh workspace links**
 
 Run: `pnpm install`
 
 Expected: pnpm links `@code-easy/cli`, `@code-easy/runtime`, and `@code-easy/ui-protocol` without errors.
 
-- [ ] **Step 6: Run CLI in dev mode**
+- [x] **Step 6: Run CLI in dev mode**
 
 Run: `pnpm --filter @code-easy/cli dev -- run "Build a CLI"`
 
@@ -1300,13 +1302,13 @@ Runtime initialized.
 Run completed: Initialized 1 plan step.
 ```
 
-- [ ] **Step 7: Build CLI**
+- [x] **Step 7: Build CLI**
 
 Run: `pnpm --filter @code-easy/cli build`
 
 Expected: `apps/cli/dist/index.js` exists and starts with a Node shebang.
 
-- [ ] **Step 8: Commit CLI entry point**
+- [x] **Step 8: Commit CLI entry point**
 
 ```bash
 git add package.json pnpm-lock.yaml apps/cli
@@ -1319,31 +1321,31 @@ git commit -m "feat: add cli entry point"
 
 - Modify: files changed by formatting or package manager lock updates only.
 
-- [ ] **Step 1: Run all tests**
+- [x] **Step 1: Run all tests**
 
 Run: `pnpm test`
 
 Expected: all workspace tests pass.
 
-- [ ] **Step 2: Run all type checks**
+- [x] **Step 2: Run all type checks**
 
 Run: `pnpm typecheck`
 
 Expected: all packages typecheck without errors.
 
-- [ ] **Step 3: Run all builds**
+- [x] **Step 3: Run all builds**
 
 Run: `pnpm build`
 
 Expected: every package produces a `dist` directory.
 
-- [ ] **Step 4: Check Git status**
+- [x] **Step 4: Check Git status**
 
 Run: `git status --short`
 
 Expected: no unstaged changes except intentional build artifacts if `dist` is ignored by `.gitignore`.
 
-- [ ] **Step 5: Add a verification note to the final implementation response**
+- [x] **Step 5: Add a verification note to the final implementation response**
 
 Report the exact commands run and whether each passed:
 
