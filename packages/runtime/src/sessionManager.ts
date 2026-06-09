@@ -4,7 +4,13 @@ import { createCodeEasyGraph } from "@code-easy/agent-core";
 import { FileSessionStore, type SessionStore, type StoredSessionSummary } from "@code-easy/storage";
 import { RuntimeCommandSchema, type AgentEvent, type RunCommand } from "@code-easy/ui-protocol";
 import { AgentEventBus } from "./eventBus.js";
-import { buildWorkspaceContextMessages, type ModelProvider } from "./modelProvider.js";
+import {
+  buildWorkspaceContextMessages,
+  type ModelProvider,
+  type ModelToolCall,
+  type ModelToolResult
+} from "./modelProvider.js";
+import { getModelCallableTool, modelToolDefinitions } from "./modelToolSchemas.js";
 import { PermissionedToolExecutor, type ToolExecutionOutcome } from "./toolExecutor.js";
 import { createDefaultToolRegistry, type ToolRegistry } from "./toolRegistry.js";
 
@@ -154,21 +160,47 @@ export class SessionManager {
       const fileSummary = summarizeFiles(fileList);
       const searchSummary = summarizeSearch(searchPattern, searchResults);
       const graphMessage = result.messages.at(-1) ?? "Runtime completed.";
-      let messageText: string;
-      let summary: string;
+      let messageText: string | undefined;
+      let summary: string | undefined;
 
       if (this.modelProvider) {
-        const modelResult = await this.modelProvider.generateText({
-          model: this.model,
-          messages: buildWorkspaceContextMessages({
-            userPrompt: command.prompt,
-            gitStatusSummary,
-            fileSummary,
-            searchSummary
-          })
+        const messages = buildWorkspaceContextMessages({
+          userPrompt: command.prompt,
+          gitStatusSummary,
+          fileSummary,
+          searchSummary
         });
-        messageText = modelResult.text;
-        summary = "Model response completed.";
+        const toolResults: ModelToolResult[] = [];
+
+        for (let round = 0; round < 4; round += 1) {
+          const modelResult = await this.modelProvider.generateText({
+            model: this.model,
+            messages,
+            tools: modelToolDefinitions,
+            toolResults
+          });
+
+          const toolCalls = modelResult.toolCalls ?? [];
+          if (toolCalls.length === 0) {
+            messageText = modelResult.text ?? "";
+            summary = "Model response completed.";
+            break;
+          }
+
+          if (toolCalls.length > 1) {
+            throw new Error(`Model returned ${toolCalls.length} tool calls; expected at most 1`);
+          }
+
+          if (round === 3) {
+            throw new Error("Model exceeded maximum tool call rounds.");
+          }
+
+          toolResults.push(await this.executeModelToolCall(runId, command.workspaceRoot, toolCalls[0]));
+        }
+
+        if (messageText === undefined || summary === undefined) {
+          throw new Error("Model did not produce a final response.");
+        }
       } else {
         messageText = ["Workspace context", gitStatusSummary, fileSummary, searchSummary, graphMessage].join("\n\n");
         summary = "Workspace inspection completed.";
@@ -246,6 +278,54 @@ export class SessionManager {
       }
 
       return output;
+    } finally {
+      unsubscribe();
+    }
+  }
+
+  private parseToolArguments(call: ModelToolCall): unknown {
+    try {
+      return JSON.parse(call.argumentsText) as unknown;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(`Model returned invalid JSON arguments for ${call.name}: ${detail}`);
+    }
+  }
+
+  private async executeModelToolCall(runId: string, workspaceRoot: string, call: ModelToolCall): Promise<ModelToolResult> {
+    if (!getModelCallableTool(call.name)) {
+      throw new Error(`Model requested unavailable tool: ${call.name}`);
+    }
+
+    const tool = this.tools.get(call.name);
+    if (!tool) {
+      throw new Error(`Model requested unregistered tool: ${call.name}`);
+    }
+
+    let completedResult: unknown;
+    const unsubscribe = this.events.subscribe((event) => {
+      if (event.type === "tool.completed" && event.runId === runId && event.result.name === call.name) {
+        completedResult = event.result;
+      }
+    });
+
+    const executor = new PermissionedToolExecutor(this.events);
+    try {
+      const outcome = await executor.execute({
+        runId,
+        workspaceRoot,
+        tool,
+        input: this.parseToolArguments(call)
+      });
+
+      if (outcome.status !== "completed") {
+        throw new Error(`Model-requested tool ${call.name} did not complete.`);
+      }
+
+      return {
+        callId: call.callId,
+        output: JSON.stringify(completedResult)
+      };
     } finally {
       unsubscribe();
     }

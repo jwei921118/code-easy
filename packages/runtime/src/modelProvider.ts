@@ -3,13 +3,33 @@ export type ModelMessage = {
   content: string;
 };
 
+export type ModelToolDefinition = {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+};
+
+export type ModelToolCall = {
+  callId: string;
+  name: string;
+  argumentsText: string;
+};
+
+export type ModelToolResult = {
+  callId: string;
+  output: string;
+};
+
 export type GenerateTextInput = {
   model: string;
   messages: ModelMessage[];
+  tools?: ModelToolDefinition[];
+  toolResults?: ModelToolResult[];
 };
 
 export type GenerateTextResult = {
-  text: string;
+  text?: string;
+  toolCalls?: ModelToolCall[];
   raw?: unknown;
 };
 

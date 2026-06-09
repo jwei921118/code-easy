@@ -303,6 +303,154 @@ describe("SessionManager", () => {
     });
   });
 
+  it("executes a model-requested read tool and sends the result back for a final answer", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-tool-loop-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "README.md"), "Tool loop context\n", "utf8");
+    const calls: unknown[] = [];
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText(input) {
+          calls.push(input);
+          if (calls.length === 1) {
+            return {
+              toolCalls: [
+                {
+                  callId: "call-1",
+                  name: "read_file",
+                  argumentsText: "{\"path\":\"README.md\",\"maxBytes\":80000}"
+                }
+              ]
+            };
+          }
+
+          return { text: "Final answer from tool output" };
+        }
+      },
+      model: "fake-model"
+    });
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    await manager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Read README"
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(JSON.stringify(calls[0])).toContain("\"tools\"");
+    expect(JSON.stringify(calls[1])).toContain("Tool loop context");
+    expect(events.flatMap((event) => (event.type === "tool.started" ? [event.call.name] : []))).toContain("read_file");
+    expect(events.find((event) => event.type === "message.delta")).toMatchObject({
+      type: "message.delta",
+      text: "Final answer from tool output"
+    });
+  });
+
+  it("fails when the model requests a non-callable tool", async () => {
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText() {
+          return {
+            toolCalls: [
+              {
+                callId: "call-1",
+                name: "run_command",
+                argumentsText: "{\"command\":\"node\"}"
+              }
+            ]
+          };
+        }
+      }
+    });
+
+    await expect(
+      manager.run({
+        kind: "run",
+        workspaceRoot: process.cwd(),
+        prompt: "Run command"
+      })
+    ).rejects.toThrow("Model requested unavailable tool: run_command");
+  });
+
+  it("fails when the model returns invalid tool arguments JSON", async () => {
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText() {
+          return {
+            toolCalls: [
+              {
+                callId: "call-1",
+                name: "read_file",
+                argumentsText: "{bad json"
+              }
+            ]
+          };
+        }
+      }
+    });
+
+    await expect(
+      manager.run({
+        kind: "run",
+        workspaceRoot: process.cwd(),
+        prompt: "Read file"
+      })
+    ).rejects.toThrow("Model returned invalid JSON arguments for read_file");
+  });
+
+  it("fails when the model returns multiple tool calls", async () => {
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText() {
+          return {
+            toolCalls: [
+              { callId: "call-1", name: "git_status", argumentsText: "{\"porcelain\":true}" },
+              { callId: "call-2", name: "list_files", argumentsText: "{\"path\":\".\",\"limit\":10,\"includeHidden\":false}" }
+            ]
+          };
+        }
+      }
+    });
+
+    await expect(
+      manager.run({
+        kind: "run",
+        workspaceRoot: process.cwd(),
+        prompt: "Inspect workspace"
+      })
+    ).rejects.toThrow("Model returned 2 tool calls; expected at most 1");
+  });
+
+  it("fails when the model exceeds the maximum tool call rounds", async () => {
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText() {
+          return {
+            toolCalls: [{ callId: "call-1", name: "git_status", argumentsText: "{\"porcelain\":true}" }]
+          };
+        }
+      }
+    });
+
+    await expect(
+      manager.run({
+        kind: "run",
+        workspaceRoot: process.cwd(),
+        prompt: "Inspect workspace forever"
+      })
+    ).rejects.toThrow("Model exceeded maximum tool call rounds.");
+  });
+
   it("runs default read tools through the permissioned executor", async () => {
     const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-runtime-"));
     await writeFile(path.join(workspaceRoot, "README.md"), "hello runtime\n", "utf8");

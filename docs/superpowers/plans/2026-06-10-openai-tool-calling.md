@@ -30,7 +30,7 @@
 - Modify: `packages/runtime/src/modelProvider.ts`
 - Modify: `packages/runtime/src/modelProvider.test.ts`
 
-- [ ] **Step 1: Write failing tests for tool-capable provider types**
+- [x] **Step 1: Write failing tests for tool-capable provider types**
 
 Append to `packages/runtime/src/modelProvider.test.ts`:
 
@@ -80,13 +80,13 @@ it("allows providers to return tool calls instead of final text", () => {
 });
 ```
 
-- [ ] **Step 2: Run model provider tests to verify failure**
+- [x] **Step 2: Run model provider tests to verify failure**
 
 Run: `pnpm --filter @code-easy/runtime test -- modelProvider.test.ts`
 
 Expected: FAIL with TypeScript errors because `ModelToolCall`, `ModelToolResult`, `tools`, and `toolResults` do not exist yet.
 
-- [ ] **Step 3: Extend provider types**
+- [x] **Step 3: Extend provider types**
 
 Update `packages/runtime/src/modelProvider.ts`:
 
@@ -129,7 +129,7 @@ export type GenerateTextResult = {
 
 Keep the existing `WorkspaceContextPromptInput` and `buildWorkspaceContextMessages()` definitions below these types.
 
-- [ ] **Step 4: Run model provider tests**
+- [x] **Step 4: Run model provider tests**
 
 Run: `pnpm --filter @code-easy/runtime test -- modelProvider.test.ts`
 
@@ -143,7 +143,7 @@ Expected: all model provider tests pass.
 - Create: `packages/runtime/src/modelToolSchemas.test.ts`
 - Modify: `packages/runtime/src/index.ts`
 
-- [ ] **Step 1: Write failing schema tests**
+- [x] **Step 1: Write failing schema tests**
 
 Create `packages/runtime/src/modelToolSchemas.test.ts`:
 
@@ -178,13 +178,13 @@ describe("model tool schemas", () => {
 });
 ```
 
-- [ ] **Step 2: Run schema tests to verify failure**
+- [x] **Step 2: Run schema tests to verify failure**
 
 Run: `pnpm --filter @code-easy/runtime test -- modelToolSchemas.test.ts`
 
 Expected: FAIL because `modelToolSchemas.ts` does not exist.
 
-- [ ] **Step 3: Implement read-only tool schemas**
+- [x] **Step 3: Implement read-only tool schemas**
 
 Create `packages/runtime/src/modelToolSchemas.ts`:
 
@@ -262,7 +262,7 @@ export function getModelCallableTool(name: string): ModelToolDefinition | undefi
 }
 ```
 
-- [ ] **Step 4: Export schema helpers**
+- [x] **Step 4: Export schema helpers**
 
 Update `packages/runtime/src/index.ts`:
 
@@ -277,7 +277,7 @@ export * from "./toolExecutor.js";
 export * from "./toolRegistry.js";
 ```
 
-- [ ] **Step 5: Run schema tests**
+- [x] **Step 5: Run schema tests**
 
 Run: `pnpm --filter @code-easy/runtime test -- modelToolSchemas.test.ts`
 
@@ -290,7 +290,7 @@ Expected: all schema tests pass.
 - Modify: `packages/runtime/src/openaiResponsesProvider.ts`
 - Modify: `packages/runtime/src/openaiResponsesProvider.test.ts`
 
-- [ ] **Step 1: Add failing provider tests for tool request payloads and tool-call parsing**
+- [x] **Step 1: Add failing provider tests for tool request payloads and tool-call parsing**
 
 Append to `packages/runtime/src/openaiResponsesProvider.test.ts`:
 
@@ -398,13 +398,13 @@ it("sends function_call_output items on follow-up requests", async () => {
 });
 ```
 
-- [ ] **Step 2: Run provider tests to verify failure**
+- [x] **Step 2: Run provider tests to verify failure**
 
 Run: `pnpm --filter @code-easy/runtime test -- openaiResponsesProvider.test.ts`
 
 Expected: FAIL because tools/tool results/tool calls are not implemented.
 
-- [ ] **Step 3: Implement OpenAI request mapping and response parsing**
+- [x] **Step 3: Implement OpenAI request mapping and response parsing**
 
 Update `packages/runtime/src/openaiResponsesProvider.ts`:
 
@@ -503,7 +503,7 @@ if (!text) {
 return { text, raw: body };
 ```
 
-- [ ] **Step 4: Run provider tests**
+- [x] **Step 4: Run provider tests**
 
 Run: `pnpm --filter @code-easy/runtime test -- openaiResponsesProvider.test.ts`
 
@@ -516,7 +516,7 @@ Expected: all OpenAI provider tests pass.
 - Modify: `packages/runtime/src/sessionManager.ts`
 - Modify: `packages/runtime/src/sessionManager.test.ts`
 
-- [ ] **Step 1: Add failing runtime tests for model-requested read tools**
+- [x] **Step 1: Add failing runtime tests for model-requested read tools**
 
 Append to `packages/runtime/src/sessionManager.test.ts`:
 
@@ -649,13 +649,13 @@ it("fails when the model returns multiple tool calls", async () => {
 });
 ```
 
-- [ ] **Step 2: Run session manager tests to verify failure**
+- [x] **Step 2: Run session manager tests to verify failure**
 
 Run: `pnpm --filter @code-easy/runtime test -- sessionManager.test.ts`
 
 Expected: FAIL because runtime does not yet execute provider tool calls.
 
-- [ ] **Step 3: Add helper methods to SessionManager**
+- [x] **Step 3: Add helper methods to SessionManager**
 
 In `packages/runtime/src/sessionManager.ts`, import schema helpers and model tool result type:
 
@@ -705,7 +705,7 @@ private async executeModelToolCall(runId: string, workspaceRoot: string, call: M
 }
 ```
 
-- [ ] **Step 4: Replace single provider call with tool loop**
+- [x] **Step 4: Replace single provider call with tool loop**
 
 In `run()`, replace the single provider call block:
 
@@ -779,7 +779,7 @@ let messageText: string | undefined;
 let summary: string | undefined;
 ```
 
-- [ ] **Step 5: Run session manager tests**
+- [x] **Step 5: Run session manager tests**
 
 Run: `pnpm --filter @code-easy/runtime test -- sessionManager.test.ts`
 
@@ -792,19 +792,19 @@ Expected: all session manager tests pass.
 - Modify: `docs/PROGRESS.md`
 - Modify: `docs/superpowers/plans/2026-06-10-openai-tool-calling.md`
 
-- [ ] **Step 1: Run full test suite**
+- [x] **Step 1: Run full test suite**
 
 Run: `pnpm test`
 
 Expected: all workspace tests pass.
 
-- [ ] **Step 2: Run full typecheck**
+- [x] **Step 2: Run full typecheck**
 
 Run: `pnpm typecheck`
 
 Expected: all workspace packages typecheck.
 
-- [ ] **Step 3: Update progress log**
+- [x] **Step 3: Update progress log**
 
 Append to `docs/PROGRESS.md`:
 
@@ -846,7 +846,7 @@ Next:
 - Decide whether to add model-directed write tools behind approvals, SQLite/checkpoints, or a desktop shell.
 ```
 
-- [ ] **Step 4: Check diff**
+- [x] **Step 4: Check diff**
 
 Run: `git diff --check`
 

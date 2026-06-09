@@ -39,12 +39,32 @@ Implemented:
 - Runtime session manager, event bus, tool registry, permissioned executor, and local session/event persistence.
 - CLI commands for `run`, `sessions`, `resume`, and `tool`.
 - Optional model provider path for `code-easy run`, with deterministic offline fallback.
+- OpenAI native function calling for read-only workspace tools.
 
 Known gap:
 
 - There is no `.planning/` GSD project state yet, so phase-level progress is tracked here and in `docs/superpowers/` until a GSD project is initialized.
 
 ## Task Log
+
+### 2026-06-10 - Add OpenAI native tool calling
+
+Completed:
+
+- Added provider-neutral model tool definition, call, and result types.
+- Added strict read-only model tool schemas for `git_status`, `list_files`, `rg_search`, and `read_file`.
+- Extended the OpenAI Responses provider to send `tools`, parse `function_call`, and send `function_call_output`.
+- Added a bounded runtime loop for model-requested read tools.
+- Kept write and execute tools unavailable to model-directed calls.
+
+Verification:
+
+- `pnpm test` passed.
+- `pnpm typecheck` passed.
+
+Next:
+
+- Commit the OpenAI native tool calling changes, then decide whether to add model-directed write tools behind approvals, SQLite/checkpoints, or a desktop shell.
 
 ### 2026-06-10 - Plan OpenAI native tool calling
 
@@ -148,6 +168,6 @@ Next:
 
 ## Next Steps
 
-1. Execute `docs/superpowers/plans/2026-06-10-openai-tool-calling.md` task by task.
-2. After implementation, update this progress log and run full verification.
+1. Commit the OpenAI native tool calling changes.
+2. Decide whether to add model-directed write tools behind approvals, SQLite/checkpoints, or a desktop shell.
 3. Keep updating this file after each completed task.
