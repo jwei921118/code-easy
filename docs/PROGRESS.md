@@ -46,6 +46,21 @@ Known gap:
 
 ## Task Log
 
+### 2026-06-10 - Plan OpenAI native tool calling
+
+Completed:
+
+- Added an implementation plan for OpenAI Responses API native function calling.
+- Scoped first implementation to read-only local tools with strict schemas and a bounded runtime loop.
+
+Verification:
+
+- Documentation-only change. No code tests required.
+
+Next:
+
+- Execute `docs/superpowers/plans/2026-06-10-openai-tool-calling.md` task by task.
+
 ### 2026-06-10 - Add model provider integration
 
 Completed:
@@ -133,6 +148,6 @@ Next:
 
 ## Next Steps
 
-1. Decide the next implementation direction: model-driven tool calling, SQLite/checkpoint persistence, or desktop app shell.
-2. Create the design/spec for the chosen direction.
+1. Execute `docs/superpowers/plans/2026-06-10-openai-tool-calling.md` task by task.
+2. After implementation, update this progress log and run full verification.
 3. Keep updating this file after each completed task.
