@@ -20,7 +20,7 @@ After each task:
 
 Status: foundation CLI/runtime slice is implemented and verified.
 
-Branch: `main`
+Branch: `codex/model-provider-integration`
 
 Working tree: clean at last check.
 
@@ -63,7 +63,7 @@ Verification:
 
 Next:
 
-- Commit the model provider integration changes, then decide whether to add model-driven tool calling or SQLite/LangGraph checkpoint persistence next.
+- Committed as `90ae2d6`, then decide whether to add model-driven tool calling or SQLite/LangGraph checkpoint persistence next.
 
 ### 2026-06-10 - Plan model provider integration
 
@@ -133,6 +133,6 @@ Next:
 
 ## Next Steps
 
-1. Commit the model provider integration changes.
-2. Decide the next implementation direction: model-driven tool calling, SQLite/checkpoint persistence, or desktop app shell.
+1. Decide the next implementation direction: model-driven tool calling, SQLite/checkpoint persistence, or desktop app shell.
+2. Create the design/spec for the chosen direction.
 3. Keep updating this file after each completed task.
