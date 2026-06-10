@@ -354,7 +354,7 @@ git commit -m "feat: add sqlite sql driver"
 - Create: `packages/storage/src/sqliteSessionStore.test.ts`
 - Modify: `packages/storage/src/index.ts`
 
-- [ ] **Step 1: Write failing SQLite session store tests**
+- [x] **Step 1: Write failing SQLite session store tests**
 
 Create `packages/storage/src/sqliteSessionStore.test.ts`:
 
@@ -457,7 +457,7 @@ describe("SqliteSessionStore", () => {
 });
 ```
 
-- [ ] **Step 2: Run store tests to verify failure**
+- [x] **Step 2: Run store tests to verify failure**
 
 Run:
 
@@ -467,7 +467,7 @@ pnpm --filter @code-easy/storage test -- sqliteSessionStore.test.ts
 
 Expected: FAIL because `sqliteSessionStore.ts` does not exist.
 
-- [ ] **Step 3: Add SQL session repository**
+- [x] **Step 3: Add SQL session repository**
 
 Create `packages/storage/src/sqlSessionRepository.ts`:
 
@@ -587,7 +587,7 @@ export class SqlSessionRepository implements SessionStore {
 }
 ```
 
-- [ ] **Step 4: Add SQLite session store wrapper**
+- [x] **Step 4: Add SQLite session store wrapper**
 
 Create `packages/storage/src/sqliteSessionStore.ts`:
 
@@ -616,7 +616,7 @@ export class SqliteSessionStore implements SessionStore {
 }
 ```
 
-- [ ] **Step 5: Export SQLite store**
+- [x] **Step 5: Export SQLite store**
 
 Update `packages/storage/src/index.ts`:
 
@@ -626,7 +626,7 @@ export * from "./sqliteSessionStore.js";
 export * from "./types.js";
 ```
 
-- [ ] **Step 6: Run SQLite store tests**
+- [x] **Step 6: Run SQLite store tests**
 
 Run:
 
@@ -636,7 +636,7 @@ pnpm --filter @code-easy/storage test -- sqliteSessionStore.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 7: Run all storage tests**
+- [x] **Step 7: Run all storage tests**
 
 Run:
 
@@ -646,7 +646,7 @@ pnpm --filter @code-easy/storage test
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit SQL repository and SQLite store**
+- [x] **Step 8: Commit SQL repository and SQLite store**
 
 Run:
 
