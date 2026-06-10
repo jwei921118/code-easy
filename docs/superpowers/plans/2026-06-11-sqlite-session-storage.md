@@ -662,7 +662,7 @@ git commit -m "feat: add sqlite session store"
 - Modify: `packages/runtime/src/sessionManager.ts`
 - Modify: `packages/runtime/src/sessionManager.test.ts`
 
-- [ ] **Step 1: Write failing runtime default-store test**
+- [x] **Step 1: Write failing runtime default-store test**
 
 Append to `packages/runtime/src/sessionManager.test.ts`:
 
@@ -695,7 +695,7 @@ it("uses SQLite session storage by default", async () => {
 });
 ```
 
-- [ ] **Step 2: Run runtime test to verify failure or current JSONL behavior**
+- [x] **Step 2: Run runtime test to verify failure or current JSONL behavior**
 
 Run:
 
@@ -705,7 +705,7 @@ pnpm --filter @code-easy/runtime test -- sessionManager.test.ts
 
 Expected: FAIL until `SessionManager` awaits the async SQLite default store creation, or PASS only if the implementation was already updated by an earlier task. Continue with the code change.
 
-- [ ] **Step 3: Switch default store creation to SQLite**
+- [x] **Step 3: Switch default store creation to SQLite**
 
 Update imports in `packages/runtime/src/sessionManager.ts`:
 
@@ -741,7 +741,7 @@ For `listSessions()`, return:
 return (await (await this.getStore(command.workspaceRoot))?.listSessions()) ?? [];
 ```
 
-- [ ] **Step 4: Run runtime tests**
+- [x] **Step 4: Run runtime tests**
 
 Run:
 
@@ -751,7 +751,7 @@ pnpm --filter @code-easy/runtime test -- sessionManager.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 5: Run storage and runtime tests together**
+- [x] **Step 5: Run storage and runtime tests together**
 
 Run:
 
@@ -762,7 +762,7 @@ pnpm --filter @code-easy/runtime test
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit runtime default switch**
+- [x] **Step 6: Commit runtime default switch**
 
 Run:
 

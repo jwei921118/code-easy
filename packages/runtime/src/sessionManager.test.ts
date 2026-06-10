@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -232,6 +232,35 @@ describe("SessionManager", () => {
       status: "completed",
       summary: "Workspace inspection completed."
     });
+  });
+
+  it("uses SQLite session storage by default", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-default-sqlite-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    const manager = new SessionManager();
+
+    const result = await manager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Find sqlite"
+    });
+
+    const sqliteFile = await stat(path.join(workspaceRoot, ".code-easy", "local", "code-easy.sqlite"));
+    expect(sqliteFile.isFile()).toBe(true);
+
+    const resumed = await manager.resume({
+      workspaceRoot,
+      threadId: result.threadId
+    });
+
+    expect(resumed).toMatchObject({
+      threadId: result.threadId,
+      status: "completed",
+      summary: "Workspace inspection completed."
+    });
+
+    const { stdout } = await execFileAsync("git", ["status", "--short"], { cwd: workspaceRoot });
+    expect(stdout).toBe("");
   });
 
   it("uses an injected model provider after gathering workspace context", async () => {

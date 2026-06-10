@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { createCodeEasyGraph } from "@code-easy/agent-core";
-import { FileSessionStore, type SessionStore, type StoredSessionSummary } from "@code-easy/storage";
+import { SqliteSessionStore, type SessionStore, type StoredSessionSummary } from "@code-easy/storage";
 import { RuntimeCommandSchema, type AgentEvent, type RunCommand } from "@code-easy/ui-protocol";
 import { AgentEventBus } from "./eventBus.js";
 import {
@@ -119,7 +119,7 @@ export class SessionManager {
 
     const runId = randomUUID();
     const threadId = command.threadId ?? randomUUID();
-    const store = this.getStore(command.workspaceRoot);
+    const store = await this.getStore(command.workspaceRoot);
     const persist = this.captureStoredEvents(store);
 
     await store?.recordRunStarted({
@@ -335,7 +335,7 @@ export class SessionManager {
     const runId = randomUUID();
     const threadId = command.threadId ?? randomUUID();
     const tool = this.tools.get(command.toolName);
-    const store = this.getStore(command.workspaceRoot);
+    const store = await this.getStore(command.workspaceRoot);
     const persist = this.captureStoredEvents(store);
 
     await store?.recordRunStarted({
@@ -416,11 +416,12 @@ export class SessionManager {
   }
 
   async listSessions(command: WorkspaceSessionCommand): Promise<StoredSessionSummary[]> {
-    return (await this.getStore(command.workspaceRoot)?.listSessions()) ?? [];
+    const store = await this.getStore(command.workspaceRoot);
+    return (await store?.listSessions()) ?? [];
   }
 
   async resume(command: ResumeSessionCommand): Promise<StoredSessionSummary | RunResult> {
-    const store = this.getStore(command.workspaceRoot);
+    const store = await this.getStore(command.workspaceRoot);
     if (!store) {
       throw new Error("Session storage is disabled.");
     }
@@ -452,10 +453,10 @@ export class SessionManager {
     return session;
   }
 
-  private getStore(workspaceRoot: string): SessionStore | undefined {
+  private async getStore(workspaceRoot: string): Promise<SessionStore | undefined> {
     if (this.configuredStore === false) return undefined;
     if (this.configuredStore) return this.configuredStore;
-    return new FileSessionStore(path.join(workspaceRoot, ".code-easy", "local"));
+    return SqliteSessionStore.open(path.join(workspaceRoot, ".code-easy", "local"));
   }
 
   private captureStoredEvents(store: SessionStore | undefined): {
