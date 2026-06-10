@@ -778,11 +778,11 @@ git commit -m "feat: use sqlite session storage by default"
 - Modify: `docs/PROGRESS.md`
 - Modify: `docs/superpowers/plans/2026-06-11-sqlite-session-storage.md`
 
-- [ ] **Step 1: Mark completed plan checkboxes**
+- [x] **Step 1: Mark completed plan checkboxes**
 
 As each task completes, change its checkbox from `- [ ]` to `- [x]` in this plan. At this final step, all implementation steps should be checked.
 
-- [ ] **Step 2: Update progress document**
+- [x] **Step 2: Update progress document**
 
 Add a new top `Task Log` entry to `docs/PROGRESS.md`:
 
@@ -809,7 +809,7 @@ Next:
 
 Update the `Current Snapshot` status and `Next Steps` to point to LangGraph checkpoint adapter work.
 
-- [ ] **Step 3: Run full verification**
+- [x] **Step 3: Run full verification**
 
 Run:
 
@@ -821,7 +821,7 @@ git diff --check
 
 Expected: all commands pass.
 
-- [ ] **Step 4: Commit final docs update**
+- [x] **Step 4: Commit final docs update**
 
 Run:
 

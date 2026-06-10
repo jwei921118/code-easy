@@ -18,7 +18,7 @@ After each task:
 
 ## Current Snapshot
 
-Status: foundation CLI/runtime slice is implemented and verified; SQLite session storage with a PostgreSQL-ready SQL adapter layer is designed and planned.
+Status: foundation CLI/runtime slice is implemented and verified; SQLite session storage with a PostgreSQL-ready SQL adapter layer is implemented.
 
 Branch: `codex/model-provider-integration`
 
@@ -37,6 +37,7 @@ Implemented:
 - Tool system with file read, file listing, ripgrep search, Git status, patch, and command execution tools.
 - Minimal LangGraph agent core.
 - Runtime session manager, event bus, tool registry, permissioned executor, and local session/event persistence.
+- SQLite-backed session/event persistence with an internal SQL driver boundary.
 - CLI commands for `run`, `sessions`, `resume`, and `tool`.
 - Optional model provider path for `code-easy run`, with deterministic offline fallback.
 - OpenAI native function calling for read-only workspace tools.
@@ -46,6 +47,25 @@ Known gap:
 - There is no `.planning/` GSD project state yet, so phase-level progress is tracked here and in `docs/superpowers/` until a GSD project is initialized.
 
 ## Task Log
+
+### 2026-06-11 - Add SQLite session storage
+
+Completed:
+
+- Added SQLite-backed session/event persistence through an internal SQL driver boundary.
+- Kept `SessionStore` as the runtime contract and preserved `FileSessionStore`.
+- Switched the runtime default store to `.code-easy/local/code-easy.sqlite`.
+- Preserved `sessions` and `resume` behavior over the new backend.
+
+Verification:
+
+- `pnpm test` passed.
+- `pnpm typecheck` passed.
+- `git diff --check` passed.
+
+Next:
+
+- Design and implement the LangGraph checkpoint adapter backed by the same SQLite database.
 
 ### 2026-06-11 - Plan SQLite session storage
 
@@ -201,6 +221,6 @@ Next:
 
 ## Next Steps
 
-1. Execute `docs/superpowers/plans/2026-06-11-sqlite-session-storage.md` task by task.
-2. Implement `SqliteSessionStore`, switch the default runtime store, verify, and commit.
-3. Design the LangGraph checkpoint adapter after SQLite session storage is complete.
+1. Design the LangGraph checkpoint adapter backed by the SQLite database.
+2. Add a dedicated checkpoint interface or adapter without expanding `SessionStore` with graph-specific methods.
+3. Keep PostgreSQL compatibility in the SQL driver boundary when adding checkpoint persistence.
