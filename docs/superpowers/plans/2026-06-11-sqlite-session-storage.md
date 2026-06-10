@@ -34,7 +34,7 @@
 - Modify: `packages/storage/src/fileSessionStore.ts`
 - Modify: `packages/storage/src/fileSessionStore.test.ts`
 
-- [ ] **Step 1: Verify `node:sqlite` is unavailable in the current runtime**
+- [x] **Step 1: Verify `node:sqlite` is unavailable in the current runtime**
 
 Run:
 
@@ -44,7 +44,7 @@ node -e "try { require('node:sqlite'); console.log('node:sqlite available'); } c
 
 Expected: FAIL with `ERR_UNKNOWN_BUILTIN_MODULE` in the current Node v23 environment. Continue with `better-sqlite3`.
 
-- [ ] **Step 2: Add SQLite dependency**
+- [x] **Step 2: Add SQLite dependency**
 
 Run:
 
@@ -55,7 +55,7 @@ pnpm --filter @code-easy/storage add -D @types/better-sqlite3
 
 Expected: `packages/storage/package.json` and `pnpm-lock.yaml` update successfully.
 
-- [ ] **Step 3: Write a failing helper reuse test**
+- [x] **Step 3: Write a failing helper reuse test**
 
 Extend `packages/storage/src/fileSessionStore.test.ts` with this test:
 
@@ -78,7 +78,7 @@ it("creates default local storage through the shared helper", async () => {
 });
 ```
 
-- [ ] **Step 4: Run the helper test to verify current behavior**
+- [x] **Step 4: Run the helper test to verify current behavior**
 
 Run:
 
@@ -88,7 +88,7 @@ pnpm --filter @code-easy/storage test -- fileSessionStore.test.ts
 
 Expected: PASS before refactor. This locks current behavior before moving the helper.
 
-- [ ] **Step 5: Create shared local storage helper**
+- [x] **Step 5: Create shared local storage helper**
 
 Create `packages/storage/src/localStorage.ts`:
 
@@ -120,7 +120,7 @@ export async function readFileIfExists(filePath: string): Promise<string> {
 }
 ```
 
-- [ ] **Step 6: Reuse helper in `FileSessionStore`**
+- [x] **Step 6: Reuse helper in `FileSessionStore`**
 
 In `packages/storage/src/fileSessionStore.ts`, change imports:
 
@@ -141,7 +141,7 @@ private async ensureRoot(): Promise<void> {
 
 Delete the private `readFileIfExists()` function at the bottom of `fileSessionStore.ts`; it now comes from `localStorage.ts`.
 
-- [ ] **Step 7: Run storage tests**
+- [x] **Step 7: Run storage tests**
 
 Run:
 
@@ -151,7 +151,7 @@ pnpm --filter @code-easy/storage test -- fileSessionStore.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit dependency and helper refactor**
+- [x] **Step 8: Commit dependency and helper refactor**
 
 Run:
 

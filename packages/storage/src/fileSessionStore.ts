@@ -1,6 +1,7 @@
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { AgentEventSchema, type AgentEvent } from "@code-easy/ui-protocol";
+import { ensureLocalStorageRoot, readFileIfExists } from "./localStorage.js";
 import type {
   RunCompletedRecord,
   RunStartedRecord,
@@ -146,16 +147,7 @@ export class FileSessionStore implements SessionStore {
   }
 
   private async ensureRoot(): Promise<void> {
-    await mkdir(this.rootPath, { recursive: true });
-
-    const codeEasyRoot = path.dirname(this.rootPath);
-    if (path.basename(this.rootPath) !== "local" || path.basename(codeEasyRoot) !== ".code-easy") return;
-
-    const ignorePath = path.join(codeEasyRoot, ".gitignore");
-    const current = await readFileIfExists(ignorePath);
-    if (current.split(/\r?\n/).includes("*")) return;
-
-    await writeFile(ignorePath, `${current}${current.length > 0 && !current.endsWith("\n") ? "\n" : ""}*\n`, "utf8");
+    await ensureLocalStorageRoot(this.rootPath);
   }
 }
 
@@ -165,14 +157,4 @@ function completionDetails(record: RunCompletedRecord): CompletionDetails {
     ...(record.summary !== undefined ? { summary: record.summary } : {}),
     ...(record.error !== undefined ? { error: record.error } : {})
   };
-}
-
-async function readFileIfExists(filePath: string): Promise<string> {
-  try {
-    await stat(filePath);
-    return readFile(filePath, "utf8");
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return "";
-    throw error;
-  }
 }

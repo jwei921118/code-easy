@@ -187,4 +187,21 @@ describe("FileSessionStore", () => {
     const { stdout } = await execFileAsync("git", ["status", "--short"], { cwd: workspaceRoot });
     expect(stdout).toBe("");
   });
+
+  it("creates default local storage through the shared helper", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-store-helper-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    const store = new FileSessionStore(path.join(workspaceRoot, ".code-easy", "local"));
+
+    await store.recordRunStarted({
+      runId: "run-1",
+      threadId: "thread-1",
+      workspaceRoot,
+      prompt: "Use helper",
+      startedAt: "2026-06-11T00:00:00.000Z"
+    });
+
+    const ignore = await readFile(path.join(workspaceRoot, ".code-easy", ".gitignore"), "utf8");
+    expect(ignore.split(/\r?\n/)).toContain("*");
+  });
 });
