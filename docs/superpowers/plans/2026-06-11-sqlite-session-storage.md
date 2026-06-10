@@ -168,7 +168,7 @@ git commit -m "chore: add sqlite dependency and storage helper"
 - Create: `packages/storage/src/sqliteDriver.ts`
 - Create: `packages/storage/src/sqliteDriver.test.ts`
 
-- [ ] **Step 1: Write failing SQLite driver tests**
+- [x] **Step 1: Write failing SQLite driver tests**
 
 Create `packages/storage/src/sqliteDriver.test.ts`:
 
@@ -228,7 +228,7 @@ describe("SqliteDriver", () => {
 });
 ```
 
-- [ ] **Step 2: Run driver tests to verify failure**
+- [x] **Step 2: Run driver tests to verify failure**
 
 Run:
 
@@ -238,7 +238,7 @@ pnpm --filter @code-easy/storage test -- sqliteDriver.test.ts
 
 Expected: FAIL because `sqliteDriver.ts` does not exist.
 
-- [ ] **Step 3: Add SQL driver interface**
+- [x] **Step 3: Add SQL driver interface**
 
 Create `packages/storage/src/sqlDriver.ts`:
 
@@ -257,7 +257,7 @@ export interface SqlDriver {
 }
 ```
 
-- [ ] **Step 4: Add SQLite driver implementation**
+- [x] **Step 4: Add SQLite driver implementation**
 
 Create `packages/storage/src/sqliteDriver.ts`:
 
@@ -326,7 +326,7 @@ export class SqliteDriver implements SqlDriver {
 }
 ```
 
-- [ ] **Step 5: Run driver tests**
+- [x] **Step 5: Run driver tests**
 
 Run:
 
@@ -336,7 +336,7 @@ pnpm --filter @code-easy/storage test -- sqliteDriver.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit driver boundary**
+- [x] **Step 6: Commit driver boundary**
 
 Run:
 
