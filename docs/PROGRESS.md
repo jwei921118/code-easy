@@ -64,7 +64,7 @@ Verification:
 
 Next:
 
-- Commit the OpenAI native tool calling changes, then decide whether to add model-directed write tools behind approvals, SQLite/checkpoints, or a desktop shell.
+- Committed as `c4b0323`, then decide whether to add model-directed write tools behind approvals, SQLite/checkpoints, or a desktop shell.
 
 ### 2026-06-10 - Plan OpenAI native tool calling
 
@@ -168,6 +168,6 @@ Next:
 
 ## Next Steps
 
-1. Commit the OpenAI native tool calling changes.
-2. Decide whether to add model-directed write tools behind approvals, SQLite/checkpoints, or a desktop shell.
+1. Decide whether to add model-directed write tools behind approvals, SQLite/checkpoints, or a desktop shell.
+2. Create the design/spec for the chosen direction.
 3. Keep updating this file after each completed task.
