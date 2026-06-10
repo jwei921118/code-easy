@@ -1,6 +1,6 @@
 # Code Easy Progress
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Purpose
 
@@ -18,7 +18,7 @@ After each task:
 
 ## Current Snapshot
 
-Status: foundation CLI/runtime slice is implemented and verified; SQLite session storage with a PostgreSQL-ready SQL adapter layer is selected as the next implementation direction.
+Status: foundation CLI/runtime slice is implemented and verified; SQLite session storage with a PostgreSQL-ready SQL adapter layer is designed and planned.
 
 Branch: `codex/model-provider-integration`
 
@@ -46,6 +46,22 @@ Known gap:
 - There is no `.planning/` GSD project state yet, so phase-level progress is tracked here and in `docs/superpowers/` until a GSD project is initialized.
 
 ## Task Log
+
+### 2026-06-11 - Plan SQLite session storage
+
+Completed:
+
+- Added `docs/superpowers/plans/2026-06-11-sqlite-session-storage.md`.
+- Planned the SQLite store implementation around a shared SQL repository and narrow database driver boundary.
+- Included dependency verification, TDD steps, runtime default switch, final verification, and progress update tasks.
+
+Verification:
+
+- Documentation-only change. No code tests required.
+
+Next:
+
+- Execute the SQLite session storage plan task by task.
 
 ### 2026-06-10 - Design SQLite session storage
 
@@ -185,6 +201,6 @@ Next:
 
 ## Next Steps
 
-1. Review the SQLite session storage design spec with the PostgreSQL-ready adapter layer.
-2. Create the implementation plan for SQLite-backed session/event storage and the internal SQL driver boundary.
-3. Implement `SqliteSessionStore`, switch the default runtime store, verify, and commit.
+1. Execute `docs/superpowers/plans/2026-06-11-sqlite-session-storage.md` task by task.
+2. Implement `SqliteSessionStore`, switch the default runtime store, verify, and commit.
+3. Design the LangGraph checkpoint adapter after SQLite session storage is complete.
