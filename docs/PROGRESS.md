@@ -18,7 +18,7 @@ After each task:
 
 ## Current Snapshot
 
-Status: foundation CLI/runtime slice is implemented and verified; SQLite session storage is selected as the next implementation direction.
+Status: foundation CLI/runtime slice is implemented and verified; SQLite session storage with a PostgreSQL-ready SQL adapter layer is selected as the next implementation direction.
 
 Branch: `codex/model-provider-integration`
 
@@ -52,6 +52,7 @@ Known gap:
 Completed:
 
 - Selected SQLite-backed session/event storage as the next implementation slice.
+- Added a SQL storage adapter layer requirement so a future PostgreSQL store can reuse repository behavior without changing runtime code.
 - Scoped LangGraph checkpoint persistence as the immediate follow-up rather than part of this slice.
 - Added `docs/superpowers/specs/2026-06-10-sqlite-session-storage-design.md`.
 
@@ -184,6 +185,6 @@ Next:
 
 ## Next Steps
 
-1. Review the SQLite session storage design spec.
-2. Create the implementation plan for SQLite-backed session/event storage.
+1. Review the SQLite session storage design spec with the PostgreSQL-ready adapter layer.
+2. Create the implementation plan for SQLite-backed session/event storage and the internal SQL driver boundary.
 3. Implement `SqliteSessionStore`, switch the default runtime store, verify, and commit.
