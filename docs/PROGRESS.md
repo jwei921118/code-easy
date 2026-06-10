@@ -18,7 +18,7 @@ After each task:
 
 ## Current Snapshot
 
-Status: foundation CLI/runtime slice is implemented and verified.
+Status: foundation CLI/runtime slice is implemented and verified; SQLite session storage is selected as the next implementation direction.
 
 Branch: `codex/model-provider-integration`
 
@@ -46,6 +46,22 @@ Known gap:
 - There is no `.planning/` GSD project state yet, so phase-level progress is tracked here and in `docs/superpowers/` until a GSD project is initialized.
 
 ## Task Log
+
+### 2026-06-10 - Design SQLite session storage
+
+Completed:
+
+- Selected SQLite-backed session/event storage as the next implementation slice.
+- Scoped LangGraph checkpoint persistence as the immediate follow-up rather than part of this slice.
+- Added `docs/superpowers/specs/2026-06-10-sqlite-session-storage-design.md`.
+
+Verification:
+
+- Documentation-only change. No code tests required.
+
+Next:
+
+- Review the design spec, then create the implementation plan for `SqliteSessionStore` and the runtime default store switch.
 
 ### 2026-06-10 - Add OpenAI native tool calling
 
@@ -168,6 +184,6 @@ Next:
 
 ## Next Steps
 
-1. Decide whether to add model-directed write tools behind approvals, SQLite/checkpoints, or a desktop shell.
-2. Create the design/spec for the chosen direction.
-3. Keep updating this file after each completed task.
+1. Review the SQLite session storage design spec.
+2. Create the implementation plan for SQLite-backed session/event storage.
+3. Implement `SqliteSessionStore`, switch the default runtime store, verify, and commit.
