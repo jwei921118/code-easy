@@ -11,3 +11,5 @@ coverage/
 *.sqlite-shm
 *.sqlite-wal
 .code-easy/local/
+.code-easy/config.json
+!.code-easy/config.example.json

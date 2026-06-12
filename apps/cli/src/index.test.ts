@@ -142,6 +142,38 @@ describe("code-easy cli", () => {
     expect(stdout).toContain("Run completed: Workspace inspection completed.");
   });
 
+  it("starts an interactive chat when no subcommand is provided", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "README.md"), "Interactive chat context\n", "utf8");
+
+    const result = await runCliWithInput(["--workspace", workspaceRoot, "--no-model"], "Find Interactive\n:q\n");
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("code-easy>");
+    expect(result.stdout).toContain("Interactive chat context");
+    expect(result.stdout).toContain("Run completed: Workspace inspection completed.");
+    expect(result.stdout).not.toContain("threadId ====>");
+  });
+
+  it("truncates very large tool output when rendering tool events", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
+    await writeFile(path.join(workspaceRoot, "large.txt"), `${"x".repeat(25_000)}\n`, "utf8");
+
+    const { stdout } = await execFileAsync(
+      "node",
+      ["--import", "tsx", "src/index.ts", "tool", "read_file", "{\"path\":\"large.txt\"}", "--workspace", workspaceRoot],
+      {
+        cwd: process.cwd(),
+        timeout: 10_000
+      }
+    );
+
+    expect(stdout).toContain("Tool completed: read_file");
+    expect(stdout).toContain("[output truncated:");
+    expect(stdout.length).toBeLessThan(20_000);
+  });
+
   it("lists sessions and resumes a stored event stream", async () => {
     const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
     await execFileAsync("git", ["init"], { cwd: workspaceRoot });

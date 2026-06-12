@@ -1,6 +1,6 @@
 # Code Easy Progress
 
-Last updated: 2026-06-11
+Last updated: 2026-06-12
 
 ## Purpose
 
@@ -18,16 +18,28 @@ After each task:
 
 ## Current Snapshot
 
-Status: foundation CLI/runtime slice is implemented and verified; SQLite session storage with a PostgreSQL-ready SQL adapter layer is implemented.
+Status: capability roadmap is defined and M1.1 cleanup is complete. The project has a working CLI/runtime foundation with model providers, read-only model tool calling, SQLite event persistence, and project-local model config. The M1.2 implementation plan is ready; the next objective is to execute the LangChain ChatModel-backed provider adapter plan so third-party OpenAI-compatible gateways can be supported without hand-writing every provider transport.
 
 Branch: `codex/model-provider-integration`
 
-Working tree: clean at last check.
+Working tree: dirty at last check; current uncommitted work includes model config/provider updates, CLI interactive mode updates, Anthropic-compatible provider files, the capability roadmap, M1.1 cleanup, and the handoff document.
 
 Verification:
 
-- `pnpm test` passed on 2026-06-10.
-- `pnpm typecheck` passed on 2026-06-10.
+- `pnpm test` passed on 2026-06-12.
+- `pnpm typecheck` passed on 2026-06-12.
+- `pnpm --filter @code-easy/cli test -- index.test.ts` passed on 2026-06-12.
+- `pnpm --filter @code-easy/runtime test -- modelConfig.test.ts` passed on 2026-06-12.
+- `rg "sk-[A-Za-z0-9]{10,}" .` found no committed secrets on 2026-06-12.
+- `git diff --check` passed on 2026-06-12.
+- `git diff --check -- docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md` passed on 2026-06-12.
+
+Primary references:
+
+- `AGENT.md` - short agent handoff, current goal, and execution rules.
+- `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md` - current capability roadmap and milestone task list.
+- `docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md` - focused M1.2 implementation plan.
+- `docs/superpowers/specs/2026-05-26-code-easy-agent-design.md` - original product and architecture direction.
 
 Implemented:
 
@@ -39,14 +51,107 @@ Implemented:
 - Runtime session manager, event bus, tool registry, permissioned executor, and local session/event persistence.
 - SQLite-backed session/event persistence with an internal SQL driver boundary.
 - CLI commands for `run`, `sessions`, `resume`, and `tool`.
+- Interactive `code-easy` command-line chat loop.
 - Optional model provider path for `code-easy run`, with deterministic offline fallback.
 - OpenAI native function calling for read-only workspace tools.
+- Project-local `.code-easy/config.json` settings using `CODE_EASY_*` keys.
+- Anthropic Messages-compatible provider for third-party gateways.
+- M1.1 CLI/config cleanup: debug output removed, large tool output bounded, and uppercase model ids rejected with a clear case-sensitivity error.
 
 Known gap:
 
 - There is no `.planning/` GSD project state yet, so phase-level progress is tracked here and in `docs/superpowers/` until a GSD project is initialized.
+- `packages/agent-core/src/graph.ts` is still a placeholder graph.
+- Model-directed writes, approval continuation, checkpoint-based resume, and richer workspace context are not implemented yet.
 
 ## Task Log
+
+### 2026-06-12 - Plan M1.2 LangChain ChatModel provider adapter
+
+Completed:
+
+- Added `docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md`.
+- Captured the agreed design: keep Code Easy's `ModelProvider` boundary and use LangChain provider packages underneath it.
+- Broke M1.2 into dependency installation, fake-model adapter tests, adapter implementation, config switching, docs updates, verification, and optional real gateway smoke testing.
+- Recorded `CODE_EASY_OPENAI_API_KIND=chat` as the explicit switch for OpenAI-compatible chat gateways while preserving `responses` as the default.
+
+Verification:
+
+- Documentation-only change.
+- `git diff --check -- docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md docs/PROGRESS.md AGENT.md` passed.
+
+Next:
+
+- Execute `docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md` task by task.
+- Install `@langchain/openai` for `@code-easy/runtime` before writing adapter code.
+
+### 2026-06-12 - Retarget M1.2 to LangChain ChatModel provider adapter
+
+Completed:
+
+- Reviewed the LangChain provider direction against the current Code Easy runtime boundary.
+- Updated the capability roadmap so M1.2 introduces a LangChain `BaseChatModel` adapter instead of a hand-written OpenAI Chat Completions transport.
+- Kept Code Easy's internal `ModelProvider` boundary as the stable runtime contract for tools, events, approvals, persistence, and future clients.
+
+Verification:
+
+- Documentation-only change. No code tests required.
+
+Next:
+
+- Create a focused implementation plan for M1.2 before editing runtime provider behavior.
+- Start with `@langchain/openai` and fake-model adapter tests, then wire config once the adapter contract is passing.
+
+### 2026-06-12 - Complete M1.1 CLI and config cleanup
+
+Completed:
+
+- Added `docs/superpowers/plans/2026-06-12-clean-cli-config-surface.md`.
+- Removed the interactive `threadId ====>` debug output.
+- Added bounded JSON rendering for large tool outputs in the CLI.
+- Added tests for no debug output and large output truncation.
+- Added model id case validation so uppercase configured model ids fail with a clear case-sensitivity message.
+- Updated `.code-easy/config.example.json` to use lower-case model ids.
+- Marked M1.1 complete in the capability roadmap.
+- Updated `AGENT.md` so the next task is M1.2.
+
+Verification:
+
+- `pnpm --filter @code-easy/cli test -- index.test.ts` passed.
+- `pnpm --filter @code-easy/runtime test -- modelConfig.test.ts` passed.
+- `pnpm typecheck` passed.
+- `pnpm test` passed.
+- `rg "sk-[A-Za-z0-9]{10,}" .` found no committed secrets.
+- `git diff --check` passed.
+
+Next:
+
+- Start M1.2: introduce a LangChain ChatModel provider adapter for third-party OpenAI-compatible gateways.
+- Create a focused implementation plan for M1.2 before editing runtime provider behavior.
+
+### 2026-06-12 - Add capability roadmap and agent handoff
+
+Completed:
+
+- Added `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`.
+- Captured the current implemented capabilities and gaps.
+- Split the product direction into M1-M4 milestones:
+  - M1: reliable CLI coding agent.
+  - M2: persistence, recovery, and long-running work.
+  - M3: rules, profiles, MCP, and browser/tool extensions.
+  - M4: client protocol and desktop shell.
+- Added `AGENT.md` as the short handoff entry for future agents and sessions.
+- Linked `AGENT.md`, the roadmap, and the original architecture spec from this progress document.
+
+Verification:
+
+- Documentation-only change.
+- `git diff --check -- docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md` passed.
+
+Next:
+
+- Start M1.1: clean the current CLI and config surface.
+- Create a focused implementation plan for M1.1 before editing runtime or CLI behavior.
 
 ### 2026-06-11 - Add SQLite session storage
 
@@ -221,6 +326,6 @@ Next:
 
 ## Next Steps
 
-1. Design the LangGraph checkpoint adapter backed by the SQLite database.
-2. Add a dedicated checkpoint interface or adapter without expanding `SessionStore` with graph-specific methods.
-3. Keep PostgreSQL compatibility in the SQL driver boundary when adding checkpoint persistence.
+1. Execute `docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md` task by task.
+2. Start with dependency installation and fake-model adapter tests before wiring config.
+3. Continue to M1.3: add model-requested `apply_patch` behind approval.

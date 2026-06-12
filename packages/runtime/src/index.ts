@@ -1,3 +1,4 @@
+export * from "./anthropicMessagesProvider.js";
 export * from "./eventBus.js";
 export * from "./modelConfig.js";
 export * from "./modelProvider.js";
