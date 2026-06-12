@@ -1,5 +1,6 @@
 export * from "./anthropicMessagesProvider.js";
 export * from "./eventBus.js";
+export * from "./langchainChatModelProvider.js";
 export * from "./modelConfig.js";
 export * from "./modelProvider.js";
 export * from "./modelToolSchemas.js";

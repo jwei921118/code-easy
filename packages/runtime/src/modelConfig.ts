@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { ModelProvider } from './modelProvider.js';
 import { createAnthropicMessagesProvider } from './anthropicMessagesProvider.js';
+import { createOpenAIChatModelProvider } from './langchainChatModelProvider.js';
 import { createOpenAIResponsesProvider } from './openaiResponsesProvider.js';
 
 export type DisabledModelConfig = {
@@ -11,6 +12,7 @@ export type DisabledModelConfig = {
 export type OpenAIModelConfig = {
   enabled: true;
   provider: 'openai';
+  apiKind: 'responses' | 'chat';
   apiKey: string;
   model: string;
   baseUrl: string;
@@ -72,6 +74,15 @@ function normalizeProvider(
     return provider;
 
   throw new Error(`Unsupported CODE_EASY_MODEL_PROVIDER: ${provider}`);
+}
+
+function normalizeOpenAIApiKind(
+  value: string | undefined,
+): 'responses' | 'chat' {
+  if (!value || value.length === 0) return 'responses';
+  if (value === 'responses' || value === 'chat') return value;
+
+  throw new Error(`Unsupported CODE_EASY_OPENAI_API_KIND: ${value}`);
 }
 
 function validateModelId(name: string, value: string): string {
@@ -186,6 +197,9 @@ export function loadModelConfig(input: LoadModelConfigInput = {}): ModelConfig {
   return {
     enabled: true,
     provider: 'openai',
+    apiKind: normalizeOpenAIApiKind(
+      readSetting(settings, env, 'CODE_EASY_OPENAI_API_KIND'),
+    ),
     apiKey,
     model: validateModelId(
       'CODE_EASY_MODEL',
@@ -207,6 +221,13 @@ export function createModelProviderFromConfig(
 
   if (config.provider === 'anthropic') {
     return createAnthropicMessagesProvider({
+      apiKey: config.apiKey,
+      baseUrl: config.baseUrl,
+    });
+  }
+
+  if (config.apiKind === 'chat') {
+    return createOpenAIChatModelProvider({
       apiKey: config.apiKey,
       baseUrl: config.baseUrl,
     });

@@ -18,7 +18,7 @@ After each task:
 
 ## Current Snapshot
 
-Status: capability roadmap is defined and M1.1 cleanup is complete. The project has a working CLI/runtime foundation with model providers, read-only model tool calling, SQLite event persistence, and project-local model config. The M1.2 implementation plan is ready; the next objective is to execute the LangChain ChatModel-backed provider adapter plan so third-party OpenAI-compatible gateways can be supported without hand-writing every provider transport.
+Status: M1.2 LangChain ChatModel provider adapter is implemented and verified. The project has a working CLI/runtime foundation with model providers, read-only model tool calling, SQLite event persistence, and project-local model config. The next objective is M1.3: expand model tool calls to write tools behind approval.
 
 Branch: `codex/model-provider-integration`
 
@@ -30,6 +30,7 @@ Verification:
 - `pnpm typecheck` passed on 2026-06-12.
 - `pnpm --filter @code-easy/cli test -- index.test.ts` passed on 2026-06-12.
 - `pnpm --filter @code-easy/runtime test -- modelConfig.test.ts` passed on 2026-06-12.
+- `pnpm --filter @code-easy/runtime test -- langchainChatModelProvider.test.ts modelConfig.test.ts` passed on 2026-06-12.
 - `rg "sk-[A-Za-z0-9]{10,}" .` found no committed secrets on 2026-06-12.
 - `git diff --check` passed on 2026-06-12.
 - `git diff --check -- docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md` passed on 2026-06-12.
@@ -57,6 +58,7 @@ Implemented:
 - Project-local `.code-easy/config.json` settings using `CODE_EASY_*` keys.
 - Anthropic Messages-compatible provider for third-party gateways.
 - M1.1 CLI/config cleanup: debug output removed, large tool output bounded, and uppercase model ids rejected with a clear case-sensitivity error.
+- M1.2 LangChain ChatModel adapter with `@langchain/openai` and `CODE_EASY_OPENAI_API_KIND=chat`.
 
 Known gap:
 
@@ -65,6 +67,30 @@ Known gap:
 - Model-directed writes, approval continuation, checkpoint-based resume, and richer workspace context are not implemented yet.
 
 ## Task Log
+
+### 2026-06-12 - Add LangChain ChatModel provider adapter
+
+Completed:
+
+- Added `@langchain/openai` as the first LangChain provider package used by runtime.
+- Added `createLangChainChatModelProvider()` for converting Code Easy messages, tools, and tool results to LangChain chat model calls.
+- Added `createOpenAIChatModelProvider()` for OpenAI-compatible chat gateways.
+- Added `CODE_EASY_OPENAI_API_KIND=chat` while keeping `responses` as the default OpenAI mode.
+- Updated safe example config for OpenAI-compatible chat mode.
+
+Verification:
+
+- `pnpm --filter @code-easy/runtime test -- langchainChatModelProvider.test.ts modelConfig.test.ts` passed.
+- `pnpm --filter @code-easy/runtime typecheck` passed.
+- `pnpm typecheck` passed.
+- `pnpm test` passed.
+- `git diff --check` passed.
+- `rg "sk-[A-Za-z0-9]{10,}" .` found no committed secrets.
+
+Next:
+
+- Start M1.3: expand model tool calls to write tools behind approval.
+- Keep raw Responses and Anthropic providers until the LangChain adapter is proven in normal CLI use.
 
 ### 2026-06-12 - Plan M1.2 LangChain ChatModel provider adapter
 
@@ -326,6 +352,6 @@ Next:
 
 ## Next Steps
 
-1. Execute `docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md` task by task.
-2. Start with dependency installation and fake-model adapter tests before wiring config.
-3. Continue to M1.3: add model-requested `apply_patch` behind approval.
+1. Optionally run a real OpenAI-compatible gateway smoke test with local-only `.code-easy/config.json`.
+2. Create a focused implementation plan for M1.3: add model-requested `apply_patch` behind approval.
+3. Continue to M1.3 implementation after the plan is reviewed.

@@ -22,7 +22,8 @@
     "@code-easy/permissions": "workspace:*",
     "@code-easy/storage": "workspace:*",
     "@code-easy/tools": "workspace:*",
-    "@code-easy/ui-protocol": "workspace:*"
+    "@code-easy/ui-protocol": "workspace:*",
+    "@langchain/openai": "^1.4.7"
   },
   "devDependencies": {
     "typescript": "^5.8.0",

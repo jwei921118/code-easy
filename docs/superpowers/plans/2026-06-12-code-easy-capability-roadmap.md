@@ -90,20 +90,20 @@
 
 **Work:**
 
-- [ ] Add `@langchain/openai` as the first provider package.
-- [ ] Add a `BaseChatModel`-backed adapter that implements Code Easy's `ModelProvider`.
-- [ ] Convert provider-neutral messages and tool definitions to LangChain messages and bindable tools.
-- [ ] Convert LangChain `AIMessage.content` and `tool_calls` back to `GenerateTextResult`.
-- [ ] Send tool results as LangChain `ToolMessage` instances.
-- [ ] Add a config switch for OpenAI API mode: current raw `responses` provider vs LangChain chat model provider.
-- [ ] Preserve the raw Responses provider temporarily until the LangChain adapter proves equivalent for Code Easy's runtime needs.
+- [x] Add `@langchain/openai` as the first provider package.
+- [x] Add a `BaseChatModel`-backed adapter that implements Code Easy's `ModelProvider`.
+- [x] Convert provider-neutral messages and tool definitions to LangChain messages and bindable tools.
+- [x] Convert LangChain `AIMessage.content` and `tool_calls` back to `GenerateTextResult`.
+- [x] Send tool results as LangChain `ToolMessage` instances.
+- [x] Add a config switch for OpenAI API mode: current raw `responses` provider vs LangChain chat model provider.
+- [x] Preserve the raw Responses provider temporarily until the LangChain adapter proves equivalent for Code Easy's runtime needs.
 
 **Acceptance:**
 
-- [ ] Unit tests cover message conversion, text extraction, tool call extraction, and tool result follow-up using a fake chat model.
-- [ ] A local config can switch providers without changing CLI code.
-- [ ] `pnpm --filter @code-easy/runtime test -- langchainChatModelProvider.test.ts modelConfig.test.ts` passes.
-- [ ] `pnpm typecheck` passes.
+- [x] Unit tests cover message conversion, text extraction, tool call extraction, and tool result follow-up using a fake chat model.
+- [x] A local config can switch providers without changing CLI code.
+- [x] `pnpm --filter @code-easy/runtime test -- langchainChatModelProvider.test.ts modelConfig.test.ts` passes.
+- [x] `pnpm typecheck` passes.
 
 ### Task M1.3: Expand Model Tool Calls To Write Tools Behind Approval
 

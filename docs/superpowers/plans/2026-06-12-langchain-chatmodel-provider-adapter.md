@@ -83,7 +83,7 @@ Rationale:
 - Modify: `packages/runtime/package.json`
 - Modify: `pnpm-lock.yaml`
 
-- [ ] **Step 1: Confirm the dependency is not already installed**
+- [x] **Step 1: Confirm the dependency is not already installed**
 
 Run:
 
@@ -99,7 +99,7 @@ Legend: production dependency, optional only, dev only
 
 or no `@langchain/openai` package in the output.
 
-- [ ] **Step 2: Install `@langchain/openai` for the runtime package**
+- [x] **Step 2: Install `@langchain/openai` for the runtime package**
 
 Run:
 
@@ -116,7 +116,7 @@ dependencies:
 
 If the command fails with a network or registry access error, rerun it with sandbox escalation and ask the user to allow dependency download.
 
-- [ ] **Step 3: Verify package metadata**
+- [x] **Step 3: Verify package metadata**
 
 Run:
 
@@ -134,7 +134,7 @@ Expected: output includes `@langchain/openai`.
 
 - Create: `packages/runtime/src/langchainChatModelProvider.test.ts`
 
-- [ ] **Step 1: Create the failing test file**
+- [x] **Step 1: Create the failing test file**
 
 Create `packages/runtime/src/langchainChatModelProvider.test.ts` with:
 
@@ -336,7 +336,7 @@ describe("createLangChainChatModelProvider", () => {
 });
 ```
 
-- [ ] **Step 2: Run the new tests and verify they fail for the expected reason**
+- [x] **Step 2: Run the new tests and verify they fail for the expected reason**
 
 Run:
 
@@ -355,7 +355,7 @@ Expected: FAIL because `./langchainChatModelProvider.js` does not exist.
 - Create: `packages/runtime/src/langchainChatModelProvider.ts`
 - Modify: `packages/runtime/src/index.ts`
 
-- [ ] **Step 1: Add the adapter implementation**
+- [x] **Step 1: Add the adapter implementation**
 
 Create `packages/runtime/src/langchainChatModelProvider.ts` with:
 
@@ -501,7 +501,7 @@ export function createOpenAIChatModelProvider(
 }
 ```
 
-- [ ] **Step 2: Export the adapter**
+- [x] **Step 2: Export the adapter**
 
 Modify `packages/runtime/src/index.ts` so it includes:
 
@@ -509,7 +509,7 @@ Modify `packages/runtime/src/index.ts` so it includes:
 export * from "./langchainChatModelProvider.js";
 ```
 
-- [ ] **Step 3: Run adapter tests**
+- [x] **Step 3: Run adapter tests**
 
 Run:
 
@@ -519,7 +519,7 @@ pnpm --filter @code-easy/runtime test -- langchainChatModelProvider.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 4: Run runtime typecheck**
+- [x] **Step 4: Run runtime typecheck**
 
 Run:
 
@@ -538,7 +538,7 @@ Expected: PASS. If TypeScript rejects the `ChatOpenAI` constructor shape because
 - Modify: `packages/runtime/src/modelConfig.ts`
 - Modify: `packages/runtime/src/modelConfig.test.ts`
 
-- [ ] **Step 1: Add failing config tests**
+- [x] **Step 1: Add failing config tests**
 
 Add these tests to `describe("loadModelConfig", ...)` in `packages/runtime/src/modelConfig.test.ts`:
 
@@ -620,7 +620,7 @@ Update the existing `creates an OpenAI provider for OpenAI config` test input so
 apiKind: "responses",
 ```
 
-- [ ] **Step 2: Run model config tests and verify failure**
+- [x] **Step 2: Run model config tests and verify failure**
 
 Run:
 
@@ -630,7 +630,7 @@ pnpm --filter @code-easy/runtime test -- modelConfig.test.ts
 
 Expected: FAIL because `apiKind` is not in `OpenAIModelConfig` yet.
 
-- [ ] **Step 3: Implement config parsing and factory selection**
+- [x] **Step 3: Implement config parsing and factory selection**
 
 Modify `packages/runtime/src/modelConfig.ts`:
 
@@ -688,7 +688,7 @@ Update `createModelProviderFromConfig()`:
   });
 ```
 
-- [ ] **Step 4: Run config and adapter tests**
+- [x] **Step 4: Run config and adapter tests**
 
 Run:
 
@@ -708,7 +708,7 @@ Expected: PASS.
 - Modify: `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`
 - Modify: `AGENT.md`
 
-- [ ] **Step 1: Update the safe example config**
+- [x] **Step 1: Update the safe example config**
 
 Change `.code-easy/config.example.json` to:
 
@@ -726,7 +726,7 @@ Change `.code-easy/config.example.json` to:
 }
 ```
 
-- [ ] **Step 2: Mark M1.2 implementation details as current in the roadmap**
+- [x] **Step 2: Mark M1.2 implementation details as current in the roadmap**
 
 In `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`, keep the M1.2 task title as:
 
@@ -747,12 +747,12 @@ Update the M1.2 file list so it names:
 - Modify: `.code-easy/config.example.json`
 ```
 
-- [ ] **Step 3: Update `AGENT.md` next task note if needed**
+- [x] **Step 3: Update `AGENT.md` next task note if needed**
 
-Ensure `AGENT.md` still says the next implementation task is:
+Ensure `AGENT.md` now says the next implementation task is:
 
 ```markdown
-Start with `M1.2: Introduce LangChain ChatModel Provider Adapter` from the roadmap.
+Start with `M1.3: Expand Model Tool Calls To Write Tools Behind Approval` from the roadmap after M1.2 final verification is complete.
 ```
 
 ---
@@ -763,7 +763,7 @@ Start with `M1.2: Introduce LangChain ChatModel Provider Adapter` from the roadm
 
 - No new files.
 
-- [ ] **Step 1: Run focused runtime tests**
+- [x] **Step 1: Run focused runtime tests**
 
 Run:
 
@@ -773,7 +773,7 @@ pnpm --filter @code-easy/runtime test -- langchainChatModelProvider.test.ts mode
 
 Expected: PASS.
 
-- [ ] **Step 2: Run runtime typecheck**
+- [x] **Step 2: Run runtime typecheck**
 
 Run:
 
@@ -783,7 +783,7 @@ pnpm --filter @code-easy/runtime typecheck
 
 Expected: PASS.
 
-- [ ] **Step 3: Run full typecheck**
+- [x] **Step 3: Run full typecheck**
 
 Run:
 
@@ -793,7 +793,7 @@ pnpm typecheck
 
 Expected: PASS.
 
-- [ ] **Step 4: Run full test suite**
+- [x] **Step 4: Run full test suite**
 
 Run:
 
@@ -803,7 +803,7 @@ pnpm test
 
 Expected: PASS.
 
-- [ ] **Step 5: Check formatting whitespace**
+- [x] **Step 5: Check formatting whitespace**
 
 Run:
 
@@ -813,7 +813,7 @@ git diff --check
 
 Expected: no output and exit code `0`.
 
-- [ ] **Step 6: Check that no secret was committed**
+- [x] **Step 6: Check that no secret was committed**
 
 Run:
 
@@ -892,7 +892,7 @@ Expected:
 - Modify: `docs/PROGRESS.md`
 - Modify: `AGENT.md`
 
-- [ ] **Step 1: Add a task log entry to `docs/PROGRESS.md`**
+- [x] **Step 1: Add a task log entry to `docs/PROGRESS.md`**
 
 Add a new top task log entry:
 
@@ -924,7 +924,7 @@ Next:
 
 Update `Current Snapshot` so the next objective becomes M1.3.
 
-- [ ] **Step 2: Update `AGENT.md` next task**
+- [x] **Step 2: Update `AGENT.md` next task**
 
 Change the next task section to:
 

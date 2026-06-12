@@ -20,6 +20,7 @@ Implemented:
 - Project-local `.code-easy/config.json` model settings.
 - OpenAI Responses and Anthropic Messages model providers.
 - Provider-neutral `ModelProvider` runtime boundary.
+- LangChain ChatModel adapter with `@langchain/openai` for OpenAI-compatible chat gateways.
 - Read-only model tool calling for `git_status`, `list_files`, `rg_search`, and `read_file`.
 - Tool registry for read/search/Git/patch/command execution tools.
 - Permission classification and approval event emission.
@@ -40,22 +41,15 @@ Known gaps:
 
 ## Next Task
 
-Execute `docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md` task by task.
-
-Direction:
-
-- Keep Code Easy's internal `ModelProvider` boundary.
-- Use LangChain provider packages, starting with `@langchain/openai`, underneath that boundary where possible.
-- Do not move all orchestration into a LangGraph prebuilt agent yet; Code Easy still needs custom events, permissions, approvals, storage, and client protocol behavior.
+Start with `M1.3: Expand Model Tool Calls To Write Tools Behind Approval` from the roadmap after M1.2 final verification is complete.
 
 Expected task-level flow:
 
-1. Install `@langchain/openai` for `@code-easy/runtime`.
-2. Write failing fake-model adapter tests.
-3. Implement the smallest passing adapter.
-4. Add config switching with tests.
-5. Run focused tests, `pnpm typecheck`, `pnpm test`, `git diff --check`, and the secret scan.
-6. Update `docs/PROGRESS.md`.
+1. Create a focused implementation plan for M1.3 under `docs/superpowers/plans/`.
+2. Write failing tests first.
+3. Implement the smallest passing change.
+4. Run focused tests, then `pnpm typecheck`.
+5. Update `docs/PROGRESS.md`.
 
 ## Execution Rules
 
