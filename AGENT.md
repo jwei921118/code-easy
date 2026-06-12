@@ -18,7 +18,6 @@ Implemented:
 - TypeScript pnpm monorepo with `apps/cli` and shared packages.
 - CLI commands: interactive `code-easy`, `run`, `sessions`, `resume`, and `tool`.
 - Project-local `.code-easy/config.json` model settings.
-- OpenAI Responses and Anthropic Messages model providers.
 - Provider-neutral `ModelProvider` runtime boundary.
 - LangChain ChatModel adapter with `@langchain/openai` for OpenAI-compatible chat gateways.
 - Read-only model tool calling for `git_status`, `list_files`, `rg_search`, and `read_file`.
@@ -41,7 +40,7 @@ Known gaps:
 
 ## Next Task
 
-Start with `M1.3: Expand Model Tool Calls To Write Tools Behind Approval` from the roadmap after M1.2 final verification is complete.
+Start with `M1.3: Expand Model Tool Calls To Write Tools Behind Approval` from the roadmap.
 
 Expected task-level flow:
 

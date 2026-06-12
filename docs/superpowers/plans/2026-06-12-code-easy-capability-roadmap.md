@@ -6,7 +6,7 @@
 
 **Architecture:** The runtime remains the product core. CLI, future desktop, and any other client consume the same typed commands, event stream, session store, tool registry, model providers, and approval workflow. Client work starts only after the runtime can plan, edit, execute, verify, persist, and resume reliably from the CLI.
 
-**Tech Stack:** TypeScript, Node.js, pnpm workspaces, Vitest, LangGraph, LangChain provider packages, SQLite, Zod, commander, OpenAI-compatible APIs, Anthropic-compatible APIs, future Electron + React desktop.
+**Tech Stack:** TypeScript, Node.js, pnpm workspaces, Vitest, LangGraph, LangChain provider packages, SQLite, Zod, commander, OpenAI-compatible APIs, future Electron + React desktop.
 
 ---
 
@@ -19,8 +19,7 @@
 - One-shot `code-easy run`.
 - `sessions`, `resume`, and direct `tool` commands.
 - Project-local model config through `.code-easy/config.json`.
-- OpenAI Responses provider in `packages/runtime/src/openaiResponsesProvider.ts`.
-- Anthropic Messages provider in `packages/runtime/src/anthropicMessagesProvider.ts`.
+- LangChain ChatModel provider adapter in `packages/runtime/src/langchainChatModelProvider.ts`.
 - Provider-neutral runtime boundary in `packages/runtime/src/modelProvider.ts`.
 - Runtime event bus and session manager in `packages/runtime/src/sessionManager.ts`.
 - Read-only model tool calling for `git_status`, `list_files`, `rg_search`, and `read_file`.
@@ -95,8 +94,8 @@
 - [x] Convert provider-neutral messages and tool definitions to LangChain messages and bindable tools.
 - [x] Convert LangChain `AIMessage.content` and `tool_calls` back to `GenerateTextResult`.
 - [x] Send tool results as LangChain `ToolMessage` instances.
-- [x] Add a config switch for OpenAI API mode: current raw `responses` provider vs LangChain chat model provider.
-- [x] Preserve the raw Responses provider temporarily until the LangChain adapter proves equivalent for Code Easy's runtime needs.
+- [x] Simplify OpenAI-compatible config so it uses the LangChain chat model provider directly.
+- [x] Remove legacy raw Responses and Anthropic-compatible providers after the LangChain adapter is verified.
 
 **Acceptance:**
 

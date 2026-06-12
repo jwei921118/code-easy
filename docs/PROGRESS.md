@@ -18,11 +18,11 @@ After each task:
 
 ## Current Snapshot
 
-Status: M1.2 LangChain ChatModel provider adapter is implemented and verified. The project has a working CLI/runtime foundation with model providers, read-only model tool calling, SQLite event persistence, and project-local model config. The next objective is M1.3: expand model tool calls to write tools behind approval.
+Status: M1.2 LangChain ChatModel provider adapter is implemented, legacy raw provider code is removed, and verification is passing. The project has a working CLI/runtime foundation with read-only model tool calling, SQLite event persistence, and project-local model config. The next objective is M1.3: expand model tool calls to write tools behind approval.
 
-Branch: `codex/model-provider-integration`
+Branch: `codex/langchain-chatmodel-adapter`
 
-Working tree: dirty at last check; current uncommitted work includes model config/provider updates, CLI interactive mode updates, Anthropic-compatible provider files, the capability roadmap, M1.1 cleanup, and the handoff document.
+Working tree: dirty at last check; current uncommitted work removes legacy raw provider code and updates provider docs before merging to `main`.
 
 Verification:
 
@@ -54,11 +54,10 @@ Implemented:
 - CLI commands for `run`, `sessions`, `resume`, and `tool`.
 - Interactive `code-easy` command-line chat loop.
 - Optional model provider path for `code-easy run`, with deterministic offline fallback.
-- OpenAI native function calling for read-only workspace tools.
+- Model tool calling for read-only workspace tools.
 - Project-local `.code-easy/config.json` settings using `CODE_EASY_*` keys.
-- Anthropic Messages-compatible provider for third-party gateways.
 - M1.1 CLI/config cleanup: debug output removed, large tool output bounded, and uppercase model ids rejected with a clear case-sensitivity error.
-- M1.2 LangChain ChatModel adapter with `@langchain/openai` and `CODE_EASY_OPENAI_API_KIND=chat`.
+- M1.2 LangChain ChatModel adapter with `@langchain/openai` for OpenAI-compatible chat gateways.
 
 Known gap:
 
@@ -68,6 +67,28 @@ Known gap:
 
 ## Task Log
 
+### 2026-06-12 - Remove legacy raw provider code
+
+Completed:
+
+- Removed the hand-written OpenAI Responses provider and tests.
+- Removed the Anthropic Messages-compatible provider and tests.
+- Simplified model config so `CODE_EASY_MODEL_PROVIDER=openai` always uses the LangChain ChatModel adapter.
+- Removed the no-longer-needed `CODE_EASY_OPENAI_API_KIND` example/config surface.
+- Reduced `.code-easy/config.example.json` to the settings currently read by runtime.
+
+Verification:
+
+- `pnpm --filter @code-easy/runtime test -- modelConfig.test.ts langchainChatModelProvider.test.ts` passed.
+- `pnpm typecheck` passed.
+- `pnpm test` passed.
+- `git diff --check` passed.
+- `rg "sk-[A-Za-z0-9]{10,}" .` found no committed secrets.
+
+Next:
+
+- Commit the cleanup, then merge `codex/langchain-chatmodel-adapter` into `main`.
+
 ### 2026-06-12 - Add LangChain ChatModel provider adapter
 
 Completed:
@@ -75,7 +96,7 @@ Completed:
 - Added `@langchain/openai` as the first LangChain provider package used by runtime.
 - Added `createLangChainChatModelProvider()` for converting Code Easy messages, tools, and tool results to LangChain chat model calls.
 - Added `createOpenAIChatModelProvider()` for OpenAI-compatible chat gateways.
-- Added `CODE_EASY_OPENAI_API_KIND=chat` while keeping `responses` as the default OpenAI mode.
+- Wired OpenAI-compatible config to the LangChain ChatModel adapter.
 - Updated safe example config for OpenAI-compatible chat mode.
 
 Verification:
@@ -90,7 +111,7 @@ Verification:
 Next:
 
 - Start M1.3: expand model tool calls to write tools behind approval.
-- Keep raw Responses and Anthropic providers until the LangChain adapter is proven in normal CLI use.
+- Legacy raw providers were removed in the follow-up cleanup task.
 
 ### 2026-06-12 - Plan M1.2 LangChain ChatModel provider adapter
 
@@ -99,7 +120,7 @@ Completed:
 - Added `docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md`.
 - Captured the agreed design: keep Code Easy's `ModelProvider` boundary and use LangChain provider packages underneath it.
 - Broke M1.2 into dependency installation, fake-model adapter tests, adapter implementation, config switching, docs updates, verification, and optional real gateway smoke testing.
-- Recorded `CODE_EASY_OPENAI_API_KIND=chat` as the explicit switch for OpenAI-compatible chat gateways while preserving `responses` as the default.
+- Initially planned an explicit OpenAI API mode switch; this was removed later when the provider surface was simplified to one LangChain OpenAI-compatible path.
 
 Verification:
 

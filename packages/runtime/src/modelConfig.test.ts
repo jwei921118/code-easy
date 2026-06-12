@@ -21,7 +21,6 @@ describe("loadModelConfig", () => {
     ).toEqual({
       enabled: true,
       provider: "openai",
-      apiKind: "responses",
       apiKey: "test-key",
       model: "gpt-5-mini",
       baseUrl: "https://api.openai.com/v1"
@@ -42,7 +41,6 @@ describe("loadModelConfig", () => {
     ).toEqual({
       enabled: true,
       provider: "openai",
-      apiKind: "responses",
       apiKey: "test-key",
       model: "gpt-5.5",
       baseUrl: "https://api.example.test/v1"
@@ -62,109 +60,32 @@ describe("loadModelConfig", () => {
     ).toThrow("CODE_EASY_MODEL must use the provider model id exactly; model ids are case-sensitive and usually lowercase");
   });
 
-  it("defaults OpenAI config to the Responses API kind", () => {
+  it("defaults to OpenAI when a Code Easy auth token is configured without an explicit provider", () => {
     expect(
       loadModelConfig({
-        env: {
-          CODE_EASY_MODEL_PROVIDER: "openai",
+        env: {},
+        settings: {
           CODE_EASY_AUTH_TOKEN: "test-key",
           CODE_EASY_MODEL: "gpt-5-mini"
         }
       })
     ).toMatchObject({
       provider: "openai",
-      apiKind: "responses"
+      model: "gpt-5-mini"
     });
   });
 
-  it("builds OpenAI chat config when CODE_EASY_OPENAI_API_KIND=chat", () => {
-    expect(
-      loadModelConfig({
-        env: {},
-        settings: {
-          CODE_EASY_MODEL_PROVIDER: "openai",
-          CODE_EASY_OPENAI_API_KIND: "chat",
-          CODE_EASY_AUTH_TOKEN: "test-key",
-          CODE_EASY_BASE_URL: "https://api.example.test/v1",
-          CODE_EASY_MODEL: "gpt-5.5"
-        }
-      })
-    ).toEqual({
-      enabled: true,
-      provider: "openai",
-      apiKind: "chat",
-      apiKey: "test-key",
-      model: "gpt-5.5",
-      baseUrl: "https://api.example.test/v1"
-    });
-  });
-
-  it("rejects unsupported OpenAI API kind values", () => {
+  it("rejects unsupported provider values", () => {
     expect(() =>
       loadModelConfig({
         env: {},
         settings: {
-          CODE_EASY_MODEL_PROVIDER: "openai",
-          CODE_EASY_OPENAI_API_KIND: "completions",
+          CODE_EASY_MODEL_PROVIDER: "anthropic",
           CODE_EASY_AUTH_TOKEN: "test-key",
           CODE_EASY_MODEL: "gpt-5-mini"
         }
       })
-    ).toThrow("Unsupported CODE_EASY_OPENAI_API_KIND: completions");
-  });
-
-  it("builds Anthropic-compatible config from project settings", () => {
-    expect(
-      loadModelConfig({
-        env: {},
-        settings: {
-          CODE_EASY_AUTH_TOKEN: "test-token",
-          CODE_EASY_BASE_URL: "https://api.example.test/v1",
-          CODE_EASY_MODEL: "gpt-5.5"
-        }
-      })
-    ).toEqual({
-      enabled: true,
-      provider: "anthropic",
-      apiKey: "test-token",
-      model: "gpt-5.5",
-      baseUrl: "https://api.example.test/v1"
-    });
-  });
-
-  it("uses Code Easy default model aliases when CODE_EASY_MODEL is absent", () => {
-    expect(
-      loadModelConfig({
-        env: {},
-        settings: {
-          CODE_EASY_AUTH_TOKEN: "test-token",
-          CODE_EASY_BASE_URL: "https://api.example.test/v1",
-          CODE_EASY_DEFAULT_SONNET_MODEL: "gpt-5.5"
-        }
-      })
-    ).toMatchObject({
-      enabled: true,
-      provider: "anthropic",
-      model: "gpt-5.5"
-    });
-  });
-
-  it("lets CLI model override Anthropic-compatible project settings", () => {
-    expect(
-      loadModelConfig({
-        env: {},
-        settings: {
-          CODE_EASY_AUTH_TOKEN: "test-token",
-          CODE_EASY_BASE_URL: "https://api.example.test/v1",
-          CODE_EASY_MODEL: "gpt-5.5"
-        },
-        modelOverride: "claude-sonnet-4"
-      })
-    ).toMatchObject({
-      enabled: true,
-      provider: "anthropic",
-      model: "claude-sonnet-4"
-    });
+    ).toThrow("Unsupported CODE_EASY_MODEL_PROVIDER: anthropic");
   });
 
   it("loads project model settings from .code-easy/config.json", async () => {
@@ -233,37 +154,11 @@ describe("loadModelConfig", () => {
     const provider = createModelProviderFromConfig({
       enabled: true,
       provider: "openai",
-      apiKind: "responses",
-      apiKey: "test-key",
-      model: "gpt-5-mini",
-      baseUrl: "https://api.openai.test/v1"
-    });
-
-    expect(provider).toMatchObject({ name: "openai-responses" });
-  });
-
-  it("creates a LangChain OpenAI chat provider for OpenAI chat config", () => {
-    const provider = createModelProviderFromConfig({
-      enabled: true,
-      provider: "openai",
-      apiKind: "chat",
       apiKey: "test-key",
       model: "gpt-5-mini",
       baseUrl: "https://api.openai.test/v1"
     });
 
     expect(provider).toMatchObject({ name: "langchain-openai-chat" });
-  });
-
-  it("creates an Anthropic provider for Anthropic-compatible config", () => {
-    const provider = createModelProviderFromConfig({
-      enabled: true,
-      provider: "anthropic",
-      apiKey: "test-token",
-      model: "GPT-5.5",
-      baseUrl: "https://api.example.test/v1"
-    });
-
-    expect(provider).toMatchObject({ name: "anthropic-messages" });
   });
 });

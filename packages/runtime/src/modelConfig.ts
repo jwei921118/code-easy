@@ -1,9 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { ModelProvider } from './modelProvider.js';
-import { createAnthropicMessagesProvider } from './anthropicMessagesProvider.js';
 import { createOpenAIChatModelProvider } from './langchainChatModelProvider.js';
-import { createOpenAIResponsesProvider } from './openaiResponsesProvider.js';
 
 export type DisabledModelConfig = {
   enabled: false;
@@ -12,24 +10,12 @@ export type DisabledModelConfig = {
 export type OpenAIModelConfig = {
   enabled: true;
   provider: 'openai';
-  apiKind: 'responses' | 'chat';
   apiKey: string;
   model: string;
   baseUrl: string;
 };
 
-export type AnthropicModelConfig = {
-  enabled: true;
-  provider: 'anthropic';
-  apiKey: string;
-  model: string;
-  baseUrl: string;
-};
-
-export type ModelConfig =
-  | DisabledModelConfig
-  | OpenAIModelConfig
-  | AnthropicModelConfig;
+export type ModelConfig = DisabledModelConfig | OpenAIModelConfig;
 
 export type ProjectModelSettings = Record<string, string | undefined>;
 
@@ -48,41 +34,13 @@ function readSetting(
   return settings?.[key] ?? env[key];
 }
 
-function readAnthropicModel(
-  settings: ProjectModelSettings | undefined,
-  env: Record<string, string | undefined>,
-): string | undefined {
-  return (
-    readSetting(settings, env, 'CODE_EASY_MODEL') ??
-    readSetting(settings, env, 'CODE_EASY_DEFAULT_SONNET_MODEL') ??
-    readSetting(settings, env, 'CODE_EASY_DEFAULT_OPUS_MODEL') ??
-    readSetting(settings, env, 'CODE_EASY_DEFAULT_HAIKU_MODEL') ??
-    readSetting(settings, env, 'CODE_EASY_REASONING_MODEL') ??
-    readSetting(settings, env, 'ANTHROPIC_MODEL') ??
-    readSetting(settings, env, 'ANTHROPIC_DEFAULT_SONNET_MODEL') ??
-    readSetting(settings, env, 'ANTHROPIC_DEFAULT_OPUS_MODEL') ??
-    readSetting(settings, env, 'ANTHROPIC_DEFAULT_HAIKU_MODEL') ??
-    readSetting(settings, env, 'ANTHROPIC_REASONING_MODEL')
-  );
-}
-
 function normalizeProvider(
   provider: string | undefined,
-): 'off' | 'openai' | 'anthropic' {
+): 'off' | 'openai' {
   if (!provider || provider.length === 0) return 'off';
-  if (provider === 'off' || provider === 'openai' || provider === 'anthropic')
-    return provider;
+  if (provider === 'off' || provider === 'openai') return provider;
 
   throw new Error(`Unsupported CODE_EASY_MODEL_PROVIDER: ${provider}`);
-}
-
-function normalizeOpenAIApiKind(
-  value: string | undefined,
-): 'responses' | 'chat' {
-  if (!value || value.length === 0) return 'responses';
-  if (value === 'responses' || value === 'chat') return value;
-
-  throw new Error(`Unsupported CODE_EASY_OPENAI_API_KIND: ${value}`);
 }
 
 function validateModelId(name: string, value: string): string {
@@ -146,43 +104,11 @@ export function loadModelConfig(input: LoadModelConfigInput = {}): ModelConfig {
     explicitProvider ??
       (readSetting(settings, env, 'CODE_EASY_AUTH_TOKEN') ||
       readSetting(settings, env, 'CODE_EASY_API_KEY') ||
-      readSetting(settings, env, 'ANTHROPIC_AUTH_TOKEN') ||
-      readSetting(settings, env, 'ANTHROPIC_API_KEY')
-        ? 'anthropic'
+      readSetting(settings, env, 'OPENAI_API_KEY')
+        ? 'openai'
         : 'off'),
   );
   if (provider === 'off') return { enabled: false };
-
-  if (provider === 'anthropic') {
-    const apiKey =
-      readSetting(settings, env, 'CODE_EASY_AUTH_TOKEN') ??
-      readSetting(settings, env, 'CODE_EASY_API_KEY') ??
-      readSetting(settings, env, 'ANTHROPIC_AUTH_TOKEN') ??
-      readSetting(settings, env, 'ANTHROPIC_API_KEY');
-    if (!apiKey) {
-      throw new Error(
-        'CODE_EASY_AUTH_TOKEN is required when CODE_EASY_MODEL_PROVIDER=anthropic',
-      );
-    }
-
-    const model = input.modelOverride ?? readAnthropicModel(settings, env);
-    if (!model) {
-      throw new Error(
-        'CODE_EASY_MODEL is required when CODE_EASY_MODEL_PROVIDER=anthropic',
-      );
-    }
-
-    return {
-      enabled: true,
-      provider: 'anthropic',
-      apiKey,
-      model: validateModelId('CODE_EASY_MODEL', model),
-      baseUrl:
-        readSetting(settings, env, 'CODE_EASY_BASE_URL') ??
-        readSetting(settings, env, 'ANTHROPIC_BASE_URL') ??
-        'https://api.anthropic.com/v1',
-    };
-  }
 
   const apiKey =
     readSetting(settings, env, 'CODE_EASY_AUTH_TOKEN') ??
@@ -197,9 +123,6 @@ export function loadModelConfig(input: LoadModelConfigInput = {}): ModelConfig {
   return {
     enabled: true,
     provider: 'openai',
-    apiKind: normalizeOpenAIApiKind(
-      readSetting(settings, env, 'CODE_EASY_OPENAI_API_KIND'),
-    ),
     apiKey,
     model: validateModelId(
       'CODE_EASY_MODEL',
@@ -218,22 +141,7 @@ export function createModelProviderFromConfig(
   config: ModelConfig,
 ): ModelProvider | false {
   if (!config.enabled) return false;
-
-  if (config.provider === 'anthropic') {
-    return createAnthropicMessagesProvider({
-      apiKey: config.apiKey,
-      baseUrl: config.baseUrl,
-    });
-  }
-
-  if (config.apiKind === 'chat') {
-    return createOpenAIChatModelProvider({
-      apiKey: config.apiKey,
-      baseUrl: config.baseUrl,
-    });
-  }
-
-  return createOpenAIResponsesProvider({
+  return createOpenAIChatModelProvider({
     apiKey: config.apiKey,
     baseUrl: config.baseUrl,
   });
