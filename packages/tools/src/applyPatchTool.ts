@@ -13,6 +13,14 @@ const ApplyPatchInputSchema = z.strictObject({
 type ApplyPatchOutput = {
   path: string;
   replacements: number;
+  diff: string;
+};
+
+export type ApplyPatchDiffInput = {
+  path: string;
+  oldText: string;
+  newText: string;
+  replacements?: number;
 };
 
 class WorkspaceWriteDeniedError extends Error {
@@ -65,6 +73,21 @@ function replaceExactText(content: string, oldText: string, newText: string): { 
   return { content: nextContent, replacements };
 }
 
+export function formatApplyPatchDiff(input: ApplyPatchDiffInput): string {
+  const replacements = input.replacements ?? 1;
+  const hunks = Array.from({ length: replacements }, () => [
+    "@@",
+    ...prefixedLines("-", input.oldText),
+    ...prefixedLines("+", input.newText)
+  ]).flat();
+
+  return [`--- a/${input.path}`, `+++ b/${input.path}`, ...hunks, ""].join("\n");
+}
+
+function prefixedLines(prefix: string, text: string): string[] {
+  return text.split("\n").map((line) => `${prefix}${line}`);
+}
+
 export const applyPatchTool: CodeEasyTool<typeof ApplyPatchInputSchema, ApplyPatchOutput> = {
   name: "apply_patch",
   risk: "write",
@@ -92,7 +115,8 @@ export const applyPatchTool: CodeEasyTool<typeof ApplyPatchInputSchema, ApplyPat
         ok: true,
         output: {
           path: input.path,
-          replacements: patched.replacements
+          replacements: patched.replacements,
+          diff: formatApplyPatchDiff({ ...input, replacements: patched.replacements })
         }
       };
     } catch (error) {

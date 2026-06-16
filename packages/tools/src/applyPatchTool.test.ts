@@ -2,7 +2,7 @@ import { mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { applyPatchTool } from "./index.js";
+import { applyPatchTool, formatApplyPatchDiff } from "./index.js";
 
 describe("applyPatchTool", () => {
   it("replaces exact text inside a workspace file", async () => {
@@ -74,6 +74,64 @@ describe("applyPatchTool", () => {
       ok: false,
       error: {
         category: "denied"
+      }
+    });
+  });
+
+  it("formats a simple apply patch diff preview", () => {
+    expect(
+      formatApplyPatchDiff({
+        path: "hello.txt",
+        oldText: "old",
+        newText: "new"
+      })
+    ).toBe("--- a/hello.txt\n+++ b/hello.txt\n@@\n-old\n+new\n");
+  });
+
+  it("formats multiline apply patch diff preview lines", () => {
+    expect(
+      formatApplyPatchDiff({
+        path: "hello.txt",
+        oldText: "old\nline",
+        newText: "new\nline"
+      })
+    ).toBe("--- a/hello.txt\n+++ b/hello.txt\n@@\n-old\n-line\n+new\n+line\n");
+  });
+
+  it("includes a diff in successful patch output", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-"));
+    await writeFile(path.join(workspaceRoot, "hello.txt"), "hello old world", "utf8");
+
+    const result = await applyPatchTool.run(
+      { path: "hello.txt", oldText: "old", newText: "new", expectedReplacements: 1 },
+      { workspaceRoot }
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      output: {
+        path: "hello.txt",
+        replacements: 1,
+        diff: "--- a/hello.txt\n+++ b/hello.txt\n@@\n-old\n+new\n"
+      }
+    });
+  });
+
+  it("includes one diff hunk per successful replacement", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-"));
+    await writeFile(path.join(workspaceRoot, "hello.txt"), "old and old", "utf8");
+
+    const result = await applyPatchTool.run(
+      { path: "hello.txt", oldText: "old", newText: "new", expectedReplacements: 2 },
+      { workspaceRoot }
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      output: {
+        path: "hello.txt",
+        replacements: 2,
+        diff: "--- a/hello.txt\n+++ b/hello.txt\n@@\n-old\n+new\n@@\n-old\n+new\n"
       }
     });
   });
