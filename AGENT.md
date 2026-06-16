@@ -20,6 +20,7 @@ Implemented:
 - TypeScript pnpm monorepo with `apps/cli` and shared packages.
 - CLI commands: interactive `code-easy`, `run`, `sessions`, `resume`, and `tool`.
 - CLI command: `approve <approvalId> --yes/--no` for stored pending model approvals.
+- Same-process approval prompts for TTY `run` and interactive chat flows.
 - Project-local `.code-easy/config.json` model settings.
 - Provider-neutral `ModelProvider` runtime boundary.
 - LangChain ChatModel adapter with `@langchain/openai` for OpenAI-compatible chat gateways.
@@ -36,7 +37,6 @@ Known gaps:
 
 - The graph in `packages/agent-core/src/graph.ts` is still a placeholder.
 - `SessionManager.run()` still owns most orchestration directly.
-- Same-process CLI model-approval prompts are not implemented yet.
 - Model-directed shell commands are not supported yet.
 - Resume is event replay plus new runs, not checkpoint-based continuation.
 - Workspace context loading is shallow.
@@ -45,13 +45,13 @@ Known gaps:
 
 ## Next Task
 
-Continue `M1.4: Implement Approval Continue Flow` from `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`.
+Start `M1.5: Add Basic Plan / Act / Observe / Verify Loop` from `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`.
 
-The stored approval continue path is implemented. The next small slice is same-process interactive prompting:
+The M1.4 approval continuation path is implemented. The next capability slice should move orchestration beyond fixed context gathering:
 
-1. When `code-easy run` pauses with `approval_required` and stdin is interactive, prompt approve/deny and call `SessionManager.approve()` in the same process.
-2. Do the same carefully for the interactive chat loop without fighting the readline prompt.
-3. Keep non-interactive behavior as a clean pause with an approval id and `code-easy approve` instructions.
+1. Add explicit plan state and events or structured messages.
+2. Route model outputs through a plan / tool / observation / next-decision loop.
+3. Add verification decision points before final responses when files changed.
 4. Keep `run_command` unavailable to model-directed calls until execute approval and sandbox policy are designed.
 5. Preserve the M1.3 tests for pause, no pre-approval write, approved continuation, and denied continuation.
 

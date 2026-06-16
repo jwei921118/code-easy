@@ -18,7 +18,7 @@ After each task:
 
 ## Current Snapshot
 
-Status: M1.4 approval continuation is in progress. The project has a working CLI/runtime foundation with read-only model tool calling, SQLite event persistence, project-local model config, a LangChain OpenAI-compatible provider path, model-requested `apply_patch` approval, and stored pending approvals that can be continued through `code-easy approve <approvalId> --yes/--no`.
+Status: M1.4 approval continuation is implemented. The project has a working CLI/runtime foundation with read-only model tool calling, SQLite event persistence, project-local model config, a LangChain OpenAI-compatible provider path, model-requested `apply_patch` approval, stored pending approvals, `code-easy approve <approvalId> --yes/--no`, and same-process interactive approval prompts for TTY runs.
 
 Branch: `codex/approval-continue-flow`
 
@@ -30,6 +30,7 @@ Verification:
 - `pnpm --filter @code-easy/runtime test -- sessionManager.test.ts` passed on 2026-06-16.
 - `pnpm --filter @code-easy/storage test -- sqliteSessionStore.test.ts` passed on 2026-06-16.
 - `pnpm --filter @code-easy/cli test -- index.test.ts` passed on 2026-06-16.
+- `pnpm --filter @code-easy/cli test -- approvalFlow.test.ts index.test.ts` passed on 2026-06-16.
 - `pnpm --filter @code-easy/tools test -- applyPatchTool.test.ts` passed on 2026-06-16.
 - `pnpm --filter @code-easy/ui-protocol test -- events.test.ts` passed on 2026-06-16.
 - `pnpm --filter @code-easy/runtime typecheck` passed on 2026-06-16.
@@ -68,12 +69,13 @@ Implemented:
 - M1.2 LangChain ChatModel adapter with `@langchain/openai` for OpenAI-compatible chat gateways.
 - M1.3 model-requested `apply_patch` behind in-memory runtime approval, with `diff.ready`, `run.paused`, approved continuation, and denied continuation.
 - M1.4 durable pending approval records and CLI `approve <approvalId> --yes/--no` continuation command.
+- M1.4 same-process interactive approval prompt for TTY `run` and chat flows.
 
 Known gap:
 
 - There is no `.planning/` GSD project state yet, so phase-level progress is tracked here and in `docs/superpowers/` until a GSD project is initialized.
 - `packages/agent-core/src/graph.ts` is still a placeholder graph.
-- Same-process interactive model-approval prompts, checkpoint-based resume, and richer workspace context are not implemented yet.
+- Checkpoint-based resume and richer workspace context are not implemented yet.
 
 ## Task Log
 
@@ -102,7 +104,29 @@ Verification:
 
 Next:
 
-- Add same-process interactive prompt-and-continue for model-requested approvals.
+- Continue with the same-process interactive prompt work recorded in the next entry.
+
+### 2026-06-16 - Add same-process interactive approval prompts
+
+Completed:
+
+- Added a CLI approval-flow helper for continuing `approval_required` runs after prompting.
+- Wired `code-easy run` to prompt and continue in the same process when stdin is a TTY.
+- Wired the interactive `code-easy>` chat loop to prompt and continue with the same `SessionManager`.
+- Preserved non-TTY behavior: output approval id and continue instructions without blocking for input.
+
+Verification:
+
+- `pnpm --filter @code-easy/cli test -- approvalFlow.test.ts index.test.ts` passed.
+- `pnpm --filter @code-easy/cli typecheck` passed.
+- `pnpm typecheck` passed.
+- `pnpm test` passed.
+- `git diff --check` passed.
+- `rg "sk-[A-Za-z0-9]{10,}" .` found no committed secrets.
+
+Next:
+
+- Start M1.5: move orchestration toward a plan / act / observe / verify loop.
 
 ### 2026-06-16 - Add model-requested apply patch approval gate
 

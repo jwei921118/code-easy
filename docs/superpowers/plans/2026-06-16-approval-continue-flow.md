@@ -17,6 +17,7 @@ This phase implements:
 - Durable pending approval records for model-requested `apply_patch`.
 - Runtime approval continuation after creating a new `SessionManager` instance.
 - CLI `approve` command for approving or denying a pending model patch.
+- Same-process approve/deny prompts for TTY `run` and interactive chat flows.
 - Better CLI rendering for approval ids, diff previews, and paused runs.
 
 This phase does not implement:
@@ -45,7 +46,11 @@ This phase does not implement:
 - Modify `packages/runtime/src/sessionManager.test.ts`
   - Cover approving and denying after constructing a new manager with the same store.
 - Modify `apps/cli/src/index.ts`
-  - Add `approve` command and render approval ids, diffs, and paused runs.
+  - Add `approve` command, same-process TTY prompting, and render approval ids, diffs, and paused runs.
+- Create `apps/cli/src/approvalFlow.ts`
+  - Share prompt-and-continue behavior between `run` and chat.
+- Create `apps/cli/src/approvalFlow.test.ts`
+  - Cover prompt-and-continue behavior.
 - Modify `apps/cli/src/index.test.ts`
   - Cover `approve` command validation and rendering.
 - Modify `docs/PROGRESS.md`, `AGENT.md`, and the roadmap.
@@ -54,33 +59,34 @@ This phase does not implement:
 
 ### Task 1: Persist Pending Approvals In Storage
 
-- [ ] Add failing storage tests for recording, loading, deleting, and listing a pending approval.
-- [ ] Add `PendingApprovalRecord` and `SessionStore` methods.
-- [ ] Add SQLite table and repository implementation.
-- [ ] Add file-store compatibility implementation.
-- [ ] Run `pnpm --filter @code-easy/storage test -- sqliteSessionStore.test.ts`.
+- [x] Add failing storage tests for recording, loading, deleting, and listing a pending approval.
+- [x] Add `PendingApprovalRecord` and `SessionStore` methods.
+- [x] Add SQLite table and repository implementation.
+- [x] Add file-store compatibility implementation.
+- [x] Run `pnpm --filter @code-easy/storage test -- sqliteSessionStore.test.ts`.
 
 ### Task 2: Restore Pending Approvals In Runtime
 
-- [ ] Add failing runtime tests showing a new `SessionManager` can approve and deny a stored pending approval.
-- [ ] Persist pending approval state before `approval.requested` is emitted.
-- [ ] Load pending approval state from storage when memory does not contain it.
-- [ ] Delete resolved pending approval records after terminal approve/deny continuation.
-- [ ] Run `pnpm --filter @code-easy/runtime test -- sessionManager.test.ts`.
+- [x] Add failing runtime tests showing a new `SessionManager` can approve and deny a stored pending approval.
+- [x] Persist pending approval state before `approval.requested` is emitted.
+- [x] Load pending approval state from storage when memory does not contain it.
+- [x] Delete resolved pending approval records after terminal approve/deny continuation.
+- [x] Run `pnpm --filter @code-easy/runtime test -- sessionManager.test.ts`.
 
 ### Task 3: Add CLI Approval Command
 
-- [ ] Add failing CLI tests for `approve <approvalId> --yes/--no` option validation and output rendering.
-- [ ] Add `code-easy approve <approvalId>` command.
-- [ ] Render approval ids in `approval.requested`, render `diff.ready`, and render `run.paused`.
-- [ ] Run `pnpm --filter @code-easy/cli test -- index.test.ts`.
+- [x] Add failing CLI tests for `approve <approvalId> --yes/--no` option validation and output rendering.
+- [x] Add `code-easy approve <approvalId>` command.
+- [x] Render approval ids in `approval.requested`, render `diff.ready`, and render `run.paused`.
+- [x] Add same-process TTY prompt-and-continue behavior for `run` and chat.
+- [x] Run `pnpm --filter @code-easy/cli test -- index.test.ts`.
 
 ### Task 4: Documentation And Verification
 
-- [ ] Mark M1.4 storage/runtime/CLI approval continue flow as implemented in the roadmap.
-- [ ] Update `docs/PROGRESS.md` and `AGENT.md`.
-- [ ] Run focused tests for storage, runtime, and CLI.
-- [ ] Run `pnpm typecheck`, `pnpm test`, `git diff --check`, and `rg "sk-[A-Za-z0-9]{10,}" .`.
+- [x] Mark M1.4 storage/runtime/CLI approval continue flow as implemented in the roadmap.
+- [x] Update `docs/PROGRESS.md` and `AGENT.md`.
+- [x] Run focused tests for storage, runtime, and CLI.
+- [x] Run `pnpm typecheck`, `pnpm test`, `git diff --check`, and `rg "sk-[A-Za-z0-9]{10,}" .`.
 
 ## Self-Review
 

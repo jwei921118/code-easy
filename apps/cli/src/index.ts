@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createInterface } from 'node:readline/promises';
+import { createInterface, type Interface } from 'node:readline/promises';
 import { program } from 'commander';
 import {
   createModelProviderFromConfig,
@@ -8,6 +8,7 @@ import {
   SessionManager,
 } from '@code-easy/runtime';
 import type { AgentEvent } from '@code-easy/ui-protocol';
+import { continueAfterApprovalPrompt } from './approvalFlow.js';
 
 type ModelOptions = {
   model?: string | false;
@@ -123,11 +124,16 @@ function parseJsonInput(input: string): unknown {
   }
 }
 
-async function promptForApproval(toolName: string): Promise<boolean> {
-  const readline = createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
+async function promptForApproval(
+  toolName: string,
+  existingReadline?: Interface,
+): Promise<boolean> {
+  const readline =
+    existingReadline ??
+    createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
 
   try {
     const answer = await readline.question(`Approve ${toolName}? [y/N] `);
@@ -136,7 +142,9 @@ async function promptForApproval(toolName: string): Promise<boolean> {
       answer.trim().toLowerCase() === 'yes'
     );
   } finally {
-    readline.close();
+    if (existingReadline === undefined) {
+      readline.close();
+    }
   }
 }
 
@@ -179,18 +187,29 @@ async function startChat(options: WorkspaceModelOptions): Promise<void> {
       }
       if (trimmed === ':q' || trimmed === 'exit' || trimmed === 'quit') break;
 
-      const result =
-        threadId === undefined
-          ? await manager.run({
-              kind: 'run',
-              workspaceRoot: options.workspace,
-              prompt,
-            })
-          : await manager.resume({
-              workspaceRoot: options.workspace,
-              threadId,
-              prompt,
-            });
+      let result;
+      if (threadId === undefined) {
+        result = await manager.run({
+          kind: 'run',
+          workspaceRoot: options.workspace,
+          prompt,
+        });
+      } else {
+        result = await manager.run({
+          kind: 'run',
+          workspaceRoot: options.workspace,
+          threadId,
+          prompt,
+        });
+      }
+      result = await continueAfterApprovalPrompt({
+        manager,
+        workspaceRoot: options.workspace,
+        result,
+        shouldPrompt: process.stdin.isTTY === true,
+        prompt: (approvalId) =>
+          promptForApproval(`approval ${approvalId}`, readline),
+      });
 
       if ('threadId' in result) {
         threadId = result.threadId;
@@ -299,10 +318,17 @@ program
     const manager = await createSessionManager(options);
     manager.subscribe(renderEvent);
 
-    await manager.run({
+    const result = await manager.run({
       kind: 'run',
       workspaceRoot: options.workspace,
       prompt,
+    });
+    await continueAfterApprovalPrompt({
+      manager,
+      workspaceRoot: options.workspace,
+      result,
+      shouldPrompt: process.stdin.isTTY === true,
+      prompt: (approvalId) => promptForApproval(`approval ${approvalId}`),
     });
   });
 

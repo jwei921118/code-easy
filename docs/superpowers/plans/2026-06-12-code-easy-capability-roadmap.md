@@ -154,7 +154,7 @@
 - [x] Add a CLI `approve <approvalId> --yes/--no` command.
 - [x] Let non-interactive command output include the approval id and stop cleanly.
 - [x] Persist approval decisions for session replay through the event stream.
-- [ ] Add same-process prompt-and-continue for interactive model runs.
+- [x] Add same-process prompt-and-continue for interactive model runs.
 
 **Acceptance:**
 
@@ -162,7 +162,7 @@
 - [x] A new runtime manager can approve or deny a stored pending approval and continue the original run.
 - [x] `code-easy approve <approvalId> --yes/--no` resolves a pending approval.
 - [x] `code-easy resume <threadId>` can replay approval events.
-- [ ] Interactive CLI can approve and continue the same run without a second command.
+- [x] Interactive CLI can approve and continue the same run without a second command.
 
 ### Task M1.5: Add Basic Plan / Act / Observe / Verify Loop
 
