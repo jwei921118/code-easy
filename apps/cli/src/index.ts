@@ -22,6 +22,11 @@ type ToolCommandOptions = {
   yes?: boolean;
 };
 
+type ApprovalCommandOptions = WorkspaceModelOptions & {
+  yes?: boolean;
+  no?: boolean;
+};
+
 const MAX_TOOL_OUTPUT_CHARS = 12_000;
 
 function renderJsonOutput(output: unknown): string {
@@ -81,6 +86,28 @@ function resolveToolOptions(
       localOptions,
       globalOptions,
       'yes',
+      undefined,
+    ),
+  };
+}
+
+function resolveApprovalOptions(
+  localOptions: Record<string, unknown>,
+): ApprovalCommandOptions {
+  const workspaceOptions = resolveWorkspaceModelOptions(localOptions);
+
+  return {
+    ...workspaceOptions,
+    yes: commandOption<boolean | undefined>(
+      localOptions,
+      program.opts<Record<string, unknown>>(),
+      'yes',
+      undefined,
+    ),
+    no: commandOption<boolean | undefined>(
+      localOptions,
+      program.opts<Record<string, unknown>>(),
+      'no',
       undefined,
     ),
   };
@@ -203,16 +230,26 @@ function renderEvent(event: AgentEvent): void {
         console.error(`Tool error: ${JSON.stringify(event.result.error)}`);
       }
       break;
+    case 'diff.ready':
+      console.log('Diff ready:');
+      console.log(event.diff);
+      break;
     case 'approval.requested':
       console.log(
         `Approval required: ${event.request.toolName} (${event.request.risk})`,
       );
+      console.log(`Approval id: ${event.request.approvalId}`);
       console.log(event.request.reason);
       break;
     case 'approval.resolved':
       console.log(
         `Approval resolved: ${event.decision.approved ? 'approved' : 'denied'}`,
       );
+      break;
+    case 'run.paused':
+      console.log(`Run paused: approval required (${event.approvalId})`);
+      console.log(`Continue with: code-easy approve ${event.approvalId} --yes`);
+      console.log(`Deny with: code-easy approve ${event.approvalId} --no`);
       break;
     case 'run.completed':
       console.log(`Run completed: ${event.summary}`);
@@ -353,6 +390,39 @@ program
           approved: true,
         });
       }
+    },
+  );
+
+program
+  .command('approve')
+  .argument('<approvalId>', 'Approval id to resolve')
+  .option('-w, --workspace <path>', 'Workspace root')
+  .option('--model <model>', 'Model name for configured provider')
+  .option('--no-model', 'Disable model provider for this run')
+  .option('-y, --yes', 'Approve the pending action')
+  .option('-n, --no', 'Deny the pending action')
+  .action(
+    async (approvalId: string, localOptions: Record<string, unknown>) => {
+      const options = resolveApprovalOptions(localOptions);
+
+      if (options.yes === true && options.no === true) {
+        throw new Error('Cannot pass both --yes and --no');
+      }
+
+      const approved =
+        options.yes === true
+          ? true
+          : options.no === true
+            ? false
+            : await promptForApproval(`approval ${approvalId}`);
+      const manager = await createSessionManager(options);
+      manager.subscribe(renderEvent);
+
+      await manager.approve({
+        workspaceRoot: options.workspace,
+        approvalId,
+        approved,
+      });
     },
   );
 

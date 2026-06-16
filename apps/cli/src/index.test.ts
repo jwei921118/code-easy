@@ -41,6 +41,23 @@ async function runCliWithInput(args: string[], input: string): Promise<{ stdout:
   });
 }
 
+async function runCliExpectFailure(args: string[]): Promise<{ stdout: string; stderr: string }> {
+  try {
+    await execFileAsync("node", ["--import", "tsx", "src/index.ts", ...args], {
+      cwd: process.cwd(),
+      timeout: 10_000
+    });
+  } catch (error) {
+    const failed = error as { stdout?: string; stderr?: string };
+    return {
+      stdout: failed.stdout ?? "",
+      stderr: failed.stderr ?? ""
+    };
+  }
+
+  throw new Error("Expected CLI command to fail");
+}
+
 describe("code-easy cli", () => {
   it("shows help when pnpm-style argument forwarding includes a standalone separator", async () => {
     const { stdout } = await execFileAsync("node", ["--import", "tsx", "src/index.ts", "--", "--help"], {
@@ -295,9 +312,25 @@ describe("code-easy cli", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("Approval required: run_command (execute)");
+    expect(result.stdout).toContain("Approval id:");
     expect(result.stdout).toContain("Approve run_command? [y/N]");
     expect(result.stdout).toContain("Approval resolved: approved");
     expect(result.stdout).toContain("hello approved prompt");
     expect(result.stdout).toContain("Run completed:");
+  });
+
+  it("rejects conflicting approve command decisions", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-cli-"));
+
+    const { stderr } = await runCliExpectFailure([
+      "approve",
+      "approval-1",
+      "--workspace",
+      workspaceRoot,
+      "--yes",
+      "--no"
+    ]);
+
+    expect(stderr).toContain("Cannot pass both --yes and --no");
   });
 });

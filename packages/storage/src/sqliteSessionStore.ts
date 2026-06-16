@@ -2,7 +2,7 @@ import path from "node:path";
 import { ensureLocalStorageRoot } from "./localStorage.js";
 import { SqliteDriver } from "./sqliteDriver.js";
 import { SqlSessionRepository } from "./sqlSessionRepository.js";
-import type { RunCompletedRecord, RunStartedRecord, SessionStore } from "./types.js";
+import type { PendingApprovalRecord, RunCompletedRecord, RunStartedRecord, SessionStore } from "./types.js";
 import type { AgentEvent } from "@code-easy/ui-protocol";
 
 export class SqliteSessionStore implements SessionStore {
@@ -33,5 +33,21 @@ export class SqliteSessionStore implements SessionStore {
 
   async listEvents(runId?: string) {
     return this.repository.listEvents(runId);
+  }
+
+  async recordPendingApproval(record: PendingApprovalRecord) {
+    return this.repository.recordPendingApproval(record);
+  }
+
+  async getPendingApproval(approvalId: string) {
+    return this.repository.getPendingApproval(approvalId);
+  }
+
+  async deletePendingApproval(approvalId: string) {
+    return this.repository.deletePendingApproval(approvalId);
+  }
+
+  async listPendingApprovals() {
+    return this.repository.listPendingApprovals();
   }
 }

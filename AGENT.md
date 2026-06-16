@@ -8,9 +8,10 @@ Build Code Easy into a Claude Code-like local coding agent. The current priority
 
 1. `docs/PROGRESS.md` - current status, latest completed work, and next actionable step.
 2. `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md` - capability roadmap and milestone task list.
-3. `docs/superpowers/plans/2026-06-16-model-apply-patch-approval.md` - focused M1.3 implementation plan.
-4. `docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md` - focused M1.2 implementation summary.
-5. `docs/superpowers/specs/2026-05-26-code-easy-agent-design.md` - original architecture and product direction.
+3. `docs/superpowers/plans/2026-06-16-approval-continue-flow.md` - focused M1.4 implementation plan.
+4. `docs/superpowers/plans/2026-06-16-model-apply-patch-approval.md` - focused M1.3 implementation plan.
+5. `docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md` - focused M1.2 implementation summary.
+6. `docs/superpowers/specs/2026-05-26-code-easy-agent-design.md` - original architecture and product direction.
 
 ## Current Baseline
 
@@ -18,11 +19,13 @@ Implemented:
 
 - TypeScript pnpm monorepo with `apps/cli` and shared packages.
 - CLI commands: interactive `code-easy`, `run`, `sessions`, `resume`, and `tool`.
+- CLI command: `approve <approvalId> --yes/--no` for stored pending model approvals.
 - Project-local `.code-easy/config.json` model settings.
 - Provider-neutral `ModelProvider` runtime boundary.
 - LangChain ChatModel adapter with `@langchain/openai` for OpenAI-compatible chat gateways.
 - Read-only model tool calling for `git_status`, `list_files`, `rg_search`, and `read_file`.
-- Model-requested `apply_patch` behind in-memory runtime approval.
+- Model-requested `apply_patch` behind runtime approval.
+- Durable pending approval records in session storage.
 - Tool registry for read/search/Git/patch/command execution tools.
 - Permission classification and approval event emission.
 - SQLite-backed run and event persistence.
@@ -33,7 +36,7 @@ Known gaps:
 
 - The graph in `packages/agent-core/src/graph.ts` is still a placeholder.
 - `SessionManager.run()` still owns most orchestration directly.
-- Durable approval storage and CLI model-approval prompts are not implemented yet.
+- Same-process CLI model-approval prompts are not implemented yet.
 - Model-directed shell commands are not supported yet.
 - Resume is event replay plus new runs, not checkpoint-based continuation.
 - Workspace context loading is shallow.
@@ -42,13 +45,13 @@ Known gaps:
 
 ## Next Task
 
-Start with `M1.4: Implement Approval Continue Flow` from `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`.
+Continue `M1.4: Implement Approval Continue Flow` from `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`.
 
-M1.4 should make the M1.3 in-memory approval path durable and client-ready:
+The stored approval continue path is implemented. The next small slice is same-process interactive prompting:
 
-1. Persist pending approval records with run id, thread id, tool name, input, and model call id.
-2. Wire approval continuation through runtime commands and storage.
-3. Add CLI prompts for model-requested `apply_patch`.
+1. When `code-easy run` pauses with `approval_required` and stdin is interactive, prompt approve/deny and call `SessionManager.approve()` in the same process.
+2. Do the same carefully for the interactive chat loop without fighting the readline prompt.
+3. Keep non-interactive behavior as a clean pause with an approval id and `code-easy approve` instructions.
 4. Keep `run_command` unavailable to model-directed calls until execute approval and sandbox policy are designed.
 5. Preserve the M1.3 tests for pause, no pre-approval write, approved continuation, and denied continuation.
 

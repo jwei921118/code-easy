@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { SessionManager } from "./index.js";
 import type { AgentEvent } from "@code-easy/ui-protocol";
 import type {
+  PendingApprovalRecord,
   SessionStore,
   RunStartedRecord,
   RunCompletedRecord,
@@ -20,6 +21,7 @@ class CapturingStore implements SessionStore {
   readonly startedRuns: RunStartedRecord[] = [];
   readonly completedRuns: RunCompletedRecord[] = [];
   readonly events: StoredEventRecord[] = [];
+  readonly pendingApprovals = new Map<string, PendingApprovalRecord>();
 
   async recordRunStarted(record: RunStartedRecord): Promise<void> {
     this.startedRuns.push(record);
@@ -78,6 +80,22 @@ class CapturingStore implements SessionStore {
     ];
 
     return runId === undefined ? records : records.filter((record) => record.event.runId === runId);
+  }
+
+  async recordPendingApproval(record: PendingApprovalRecord): Promise<void> {
+    this.pendingApprovals.set(record.approvalId, record);
+  }
+
+  async getPendingApproval(approvalId: string): Promise<PendingApprovalRecord | undefined> {
+    return this.pendingApprovals.get(approvalId);
+  }
+
+  async deletePendingApproval(approvalId: string): Promise<void> {
+    this.pendingApprovals.delete(approvalId);
+  }
+
+  async listPendingApprovals(): Promise<PendingApprovalRecord[]> {
+    return [...this.pendingApprovals.values()];
   }
 }
 
@@ -663,6 +681,131 @@ describe("SessionManager", () => {
     expect(events.filter((event) => event.type === "tool.started" && event.call.name === "apply_patch")).toHaveLength(0);
     expect(JSON.stringify(calls[1])).toContain("User denied apply_patch");
     await expect(readFile(path.join(workspaceRoot, "hello.txt"), "utf8")).resolves.toBe("hello old world");
+  });
+
+  it("continues a stored pending model apply_patch approval from a new manager", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-model-patch-stored-approve-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "hello.txt"), "hello old world", "utf8");
+    const store = new CapturingStore();
+    const firstManager = new SessionManager({
+      store,
+      modelProvider: {
+        name: "fake",
+        async generateText() {
+          return {
+            toolCalls: [
+              {
+                callId: "call-apply",
+                name: "apply_patch",
+                argumentsText:
+                  "{\"path\":\"hello.txt\",\"oldText\":\"old\",\"newText\":\"new\",\"expectedReplacements\":1}"
+              }
+            ]
+          };
+        }
+      }
+    });
+
+    const paused = await firstManager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Patch hello"
+    });
+
+    expect(paused.status).toBe("approval_required");
+    expect(store.pendingApprovals.has(paused.approvalId ?? "")).toBe(true);
+
+    const calls: unknown[] = [];
+    const secondManager = new SessionManager({
+      store,
+      modelProvider: {
+        name: "fake",
+        async generateText(input) {
+          calls.push(input);
+          return { text: "Patch applied after restore" };
+        }
+      }
+    });
+    const events: AgentEvent[] = [];
+    secondManager.subscribe((event) => {
+      events.push(event);
+    });
+
+    const completed = await secondManager.approve({
+      workspaceRoot,
+      approvalId: paused.approvalId!,
+      approved: true
+    });
+
+    expect(completed).toMatchObject({
+      runId: paused.runId,
+      threadId: paused.threadId,
+      status: "completed"
+    });
+    await expect(readFile(path.join(workspaceRoot, "hello.txt"), "utf8")).resolves.toBe("hello new world");
+    expect(JSON.stringify(calls[0])).toContain("call-apply");
+    expect(events.find((event) => event.type === "approval.resolved")).toMatchObject({
+      type: "approval.resolved",
+      runId: paused.runId,
+      decision: {
+        approvalId: paused.approvalId,
+        approved: true
+      }
+    });
+    expect(store.pendingApprovals.has(paused.approvalId ?? "")).toBe(false);
+  });
+
+  it("continues a stored pending model apply_patch denial from a new manager", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-model-patch-stored-deny-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "hello.txt"), "hello old world", "utf8");
+    const store = new CapturingStore();
+    const firstManager = new SessionManager({
+      store,
+      modelProvider: {
+        name: "fake",
+        async generateText() {
+          return {
+            toolCalls: [
+              {
+                callId: "call-apply",
+                name: "apply_patch",
+                argumentsText:
+                  "{\"path\":\"hello.txt\",\"oldText\":\"old\",\"newText\":\"new\",\"expectedReplacements\":1}"
+              }
+            ]
+          };
+        }
+      }
+    });
+    const paused = await firstManager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Patch hello"
+    });
+
+    const calls: unknown[] = [];
+    const secondManager = new SessionManager({
+      store,
+      modelProvider: {
+        name: "fake",
+        async generateText(input) {
+          calls.push(input);
+          return { text: "Patch denied after restore" };
+        }
+      }
+    });
+
+    await secondManager.approve({
+      workspaceRoot,
+      approvalId: paused.approvalId!,
+      approved: false
+    });
+
+    await expect(readFile(path.join(workspaceRoot, "hello.txt"), "utf8")).resolves.toBe("hello old world");
+    expect(JSON.stringify(calls[0])).toContain("User denied apply_patch");
+    expect(store.pendingApprovals.has(paused.approvalId ?? "")).toBe(false);
   });
 
   it("fails when the model requests a non-callable tool", async () => {

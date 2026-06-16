@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { createCodeEasyGraph } from "@code-easy/agent-core";
-import { SqliteSessionStore, type SessionStore, type StoredSessionSummary } from "@code-easy/storage";
+import { SqliteSessionStore, type PendingApprovalRecord, type SessionStore, type StoredSessionSummary } from "@code-easy/storage";
 import { formatApplyPatchDiff } from "@code-easy/tools";
 import { RuntimeCommandSchema, type AgentEvent, type RunCommand } from "@code-easy/ui-protocol";
 import { AgentEventBus } from "./eventBus.js";
@@ -69,6 +69,35 @@ type PendingModelApproval = {
   nextRound: number;
 };
 
+function toPendingApprovalRecord(pending: PendingModelApproval): PendingApprovalRecord {
+  return {
+    approvalId: pending.approvalId,
+    runId: pending.runId,
+    threadId: pending.threadId,
+    workspaceRoot: pending.workspaceRoot,
+    call: pending.call,
+    input: pending.input,
+    messages: pending.messages,
+    toolResults: pending.toolResults,
+    nextRound: pending.nextRound,
+    createdAt: new Date().toISOString()
+  };
+}
+
+function pendingModelApprovalFromRecord(record: PendingApprovalRecord): PendingModelApproval {
+  return {
+    approvalId: record.approvalId,
+    runId: record.runId,
+    threadId: record.threadId,
+    workspaceRoot: record.workspaceRoot,
+    call: record.call,
+    input: record.input,
+    messages: record.messages,
+    toolResults: record.toolResults,
+    nextRound: record.nextRound
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -120,7 +149,6 @@ export class SessionManager {
   private readonly configuredStore?: SessionStore | false;
   private readonly modelProvider?: ModelProvider | false;
   private readonly model: string;
-  // M1.3 keeps pending model approvals in memory; durable restart support is deferred to M1.4.
   private readonly pendingModelApprovals = new Map<string, PendingModelApproval>();
 
   constructor(options: SessionManagerOptions = {}) {
@@ -227,8 +255,8 @@ export class SessionManager {
             toolCall,
             approvalId,
             undefined,
-            (pendingApprovalId, input) => {
-              this.pendingModelApprovals.set(pendingApprovalId, {
+            async (pendingApprovalId, input) => {
+              await this.rememberPendingModelApproval(store, {
                 approvalId: pendingApprovalId,
                 runId,
                 threadId,
@@ -361,7 +389,7 @@ export class SessionManager {
     call: ModelToolCall,
     approvalId?: string,
     approved?: boolean,
-    onApprovalRequired?: (approvalId: string, input: unknown) => void,
+    onApprovalRequired?: (approvalId: string, input: unknown) => void | Promise<void>,
     emitDiff = true
   ): Promise<
     | { status: "completed"; result: ModelToolResult }
@@ -390,7 +418,7 @@ export class SessionManager {
         })
       });
       if (approved !== true && requestApprovalId) {
-        onApprovalRequired?.(requestApprovalId, input);
+        await onApprovalRequired?.(requestApprovalId, input);
       }
     }
 
@@ -518,7 +546,8 @@ export class SessionManager {
   }
 
   async approve(command: ApproveCommand): Promise<RunResult> {
-    const pending = this.pendingModelApprovals.get(command.approvalId);
+    const store = await this.getStore(command.workspaceRoot);
+    const pending = await this.loadPendingModelApproval(store, command.approvalId);
     if (!pending) {
       throw new Error(`Unknown approval: ${command.approvalId}`);
     }
@@ -527,7 +556,6 @@ export class SessionManager {
       throw new Error("Approval workspaceRoot does not match pending approval.");
     }
 
-    const store = await this.getStore(command.workspaceRoot);
     const persist = this.captureStoredEvents(store);
     const toolResults = [...pending.toolResults];
 
@@ -608,8 +636,8 @@ export class SessionManager {
           toolCall,
           approvalId,
           undefined,
-          (pendingApprovalId, input) => {
-            this.pendingModelApprovals.set(pendingApprovalId, {
+          async (pendingApprovalId, input) => {
+            await this.rememberPendingModelApproval(store, {
               approvalId: pendingApprovalId,
               runId: pending.runId,
               threadId: pending.threadId,
@@ -688,8 +716,28 @@ export class SessionManager {
       throw error;
     } finally {
       this.pendingModelApprovals.delete(command.approvalId);
+      await store?.deletePendingApproval(command.approvalId);
       persist.unsubscribe();
     }
+  }
+
+  private async rememberPendingModelApproval(
+    store: SessionStore | undefined,
+    pending: PendingModelApproval
+  ): Promise<void> {
+    this.pendingModelApprovals.set(pending.approvalId, pending);
+    await store?.recordPendingApproval(toPendingApprovalRecord(pending));
+  }
+
+  private async loadPendingModelApproval(
+    store: SessionStore | undefined,
+    approvalId: string
+  ): Promise<PendingModelApproval | undefined> {
+    const inMemory = this.pendingModelApprovals.get(approvalId);
+    if (inMemory) return inMemory;
+
+    const stored = await store?.getPendingApproval(approvalId);
+    return stored === undefined ? undefined : pendingModelApprovalFromRecord(stored);
   }
 
   async listSessions(command: WorkspaceSessionCommand): Promise<StoredSessionSummary[]> {

@@ -35,8 +35,22 @@ export class SqliteDriver implements SqlDriver {
         event_json text not null
       );
 
+      create table if not exists pending_approvals (
+        approval_id text primary key,
+        run_id text not null,
+        thread_id text not null,
+        workspace_root text not null,
+        call_json text not null,
+        input_json text not null,
+        messages_json text not null,
+        tool_results_json text not null,
+        next_round integer not null,
+        created_at text not null
+      );
+
       create index if not exists idx_runs_thread_started on runs(thread_id, started_at);
       create index if not exists idx_events_run_sequence on events(run_id, sequence);
+      create index if not exists idx_pending_approvals_created on pending_approvals(created_at);
     `);
   }
 

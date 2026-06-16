@@ -18,15 +18,18 @@ After each task:
 
 ## Current Snapshot
 
-Status: M1.3 is implemented in runtime. The project has a working CLI/runtime foundation with read-only model tool calling, SQLite event persistence, project-local model config, a LangChain OpenAI-compatible provider path, and model-requested `apply_patch` guarded by in-memory runtime approval. The next objective is M1.4: make approval continuation durable and connect it to CLI/runtime commands.
+Status: M1.4 approval continuation is in progress. The project has a working CLI/runtime foundation with read-only model tool calling, SQLite event persistence, project-local model config, a LangChain OpenAI-compatible provider path, model-requested `apply_patch` approval, and stored pending approvals that can be continued through `code-easy approve <approvalId> --yes/--no`.
 
-Branch: `codex/model-apply-patch-approval`
+Branch: `codex/approval-continue-flow`
 
-Working tree: dirty at last check; current uncommitted work completes the M1.3 runtime approval implementation and documentation updates.
+Working tree: dirty at last check; current uncommitted work adds durable pending approvals, runtime approval restore, CLI approval command, and M1.4 documentation.
 
 Verification:
 
 - `pnpm --filter @code-easy/runtime test -- sessionManager.test.ts modelToolSchemas.test.ts` passed on 2026-06-16.
+- `pnpm --filter @code-easy/runtime test -- sessionManager.test.ts` passed on 2026-06-16.
+- `pnpm --filter @code-easy/storage test -- sqliteSessionStore.test.ts` passed on 2026-06-16.
+- `pnpm --filter @code-easy/cli test -- index.test.ts` passed on 2026-06-16.
 - `pnpm --filter @code-easy/tools test -- applyPatchTool.test.ts` passed on 2026-06-16.
 - `pnpm --filter @code-easy/ui-protocol test -- events.test.ts` passed on 2026-06-16.
 - `pnpm --filter @code-easy/runtime typecheck` passed on 2026-06-16.
@@ -64,14 +67,42 @@ Implemented:
 - M1.1 CLI/config cleanup: debug output removed, large tool output bounded, and uppercase model ids rejected with a clear case-sensitivity error.
 - M1.2 LangChain ChatModel adapter with `@langchain/openai` for OpenAI-compatible chat gateways.
 - M1.3 model-requested `apply_patch` behind in-memory runtime approval, with `diff.ready`, `run.paused`, approved continuation, and denied continuation.
+- M1.4 durable pending approval records and CLI `approve <approvalId> --yes/--no` continuation command.
 
 Known gap:
 
 - There is no `.planning/` GSD project state yet, so phase-level progress is tracked here and in `docs/superpowers/` until a GSD project is initialized.
 - `packages/agent-core/src/graph.ts` is still a placeholder graph.
-- Durable approval storage, CLI model-approval prompts, checkpoint-based resume, and richer workspace context are not implemented yet.
+- Same-process interactive model-approval prompts, checkpoint-based resume, and richer workspace context are not implemented yet.
 
 ## Task Log
+
+### 2026-06-16 - Add durable approval continue flow
+
+Completed:
+
+- Added pending approval persistence to the `SessionStore` boundary.
+- Added SQLite and file-store pending approval implementations.
+- Stored model-requested `apply_patch` pending state before returning `approval_required`.
+- Let a fresh `SessionManager` restore a stored pending approval and continue approved or denied decisions.
+- Added `code-easy approve <approvalId> --yes/--no`.
+- Rendered approval ids, diff previews, and paused-run continuation hints in CLI output.
+- Added `docs/superpowers/plans/2026-06-16-approval-continue-flow.md`.
+
+Verification:
+
+- `pnpm --filter @code-easy/storage test -- sqliteSessionStore.test.ts` passed.
+- `pnpm --filter @code-easy/storage typecheck` passed.
+- `pnpm --filter @code-easy/runtime test -- sessionManager.test.ts` passed.
+- `pnpm --filter @code-easy/cli test -- index.test.ts` passed.
+- `pnpm typecheck` passed.
+- `pnpm test` passed.
+- `git diff --check` passed.
+- `rg "sk-[A-Za-z0-9]{10,}" .` found no committed secrets.
+
+Next:
+
+- Add same-process interactive prompt-and-continue for model-requested approvals.
 
 ### 2026-06-16 - Add model-requested apply patch approval gate
 

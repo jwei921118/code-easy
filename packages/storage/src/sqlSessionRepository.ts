@@ -1,6 +1,7 @@
 import { AgentEventSchema, type AgentEvent } from "@code-easy/ui-protocol";
 import type { SqlDriver, SqlRow } from "./sqlDriver.js";
 import type {
+  PendingApprovalRecord,
   RunCompletedRecord,
   RunStartedRecord,
   SessionStore,
@@ -23,6 +24,19 @@ type RunRow = SqlRow & {
 type EventRow = SqlRow & {
   sequence: number;
   event_json: string;
+};
+
+type PendingApprovalRow = SqlRow & {
+  approval_id: string;
+  run_id: string;
+  thread_id: string;
+  workspace_root: string;
+  call_json: string;
+  input_json: string;
+  messages_json: string;
+  tool_results_json: string;
+  next_round: number;
+  created_at: string;
 };
 
 export class SqlSessionRepository implements SessionStore {
@@ -111,4 +125,71 @@ export class SqlSessionRepository implements SessionStore {
       event: AgentEventSchema.parse(JSON.parse(row.event_json))
     }));
   }
+
+  async recordPendingApproval(record: PendingApprovalRecord): Promise<void> {
+    this.driver.execute(
+      `
+        insert or replace into pending_approvals (
+          approval_id,
+          run_id,
+          thread_id,
+          workspace_root,
+          call_json,
+          input_json,
+          messages_json,
+          tool_results_json,
+          next_round,
+          created_at
+        ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        record.approvalId,
+        record.runId,
+        record.threadId,
+        record.workspaceRoot,
+        JSON.stringify(record.call),
+        JSON.stringify(record.input),
+        JSON.stringify(record.messages),
+        JSON.stringify(record.toolResults),
+        record.nextRound,
+        record.createdAt
+      ]
+    );
+  }
+
+  async getPendingApproval(approvalId: string): Promise<PendingApprovalRecord | undefined> {
+    const row = this.driver.queryOne<PendingApprovalRow>(
+      "select * from pending_approvals where approval_id = ?",
+      [approvalId]
+    );
+
+    return row === undefined ? undefined : pendingApprovalFromRow(row);
+  }
+
+  async deletePendingApproval(approvalId: string): Promise<void> {
+    this.driver.execute("delete from pending_approvals where approval_id = ?", [approvalId]);
+  }
+
+  async listPendingApprovals(): Promise<PendingApprovalRecord[]> {
+    const rows = this.driver.query<PendingApprovalRow>(
+      "select * from pending_approvals order by created_at asc"
+    );
+
+    return rows.map(pendingApprovalFromRow);
+  }
+}
+
+function pendingApprovalFromRow(row: PendingApprovalRow): PendingApprovalRecord {
+  return {
+    approvalId: row.approval_id,
+    runId: row.run_id,
+    threadId: row.thread_id,
+    workspaceRoot: row.workspace_root,
+    call: JSON.parse(row.call_json) as PendingApprovalRecord["call"],
+    input: JSON.parse(row.input_json) as unknown,
+    messages: JSON.parse(row.messages_json) as PendingApprovalRecord["messages"],
+    toolResults: JSON.parse(row.tool_results_json) as PendingApprovalRecord["toolResults"],
+    nextRound: row.next_round,
+    createdAt: row.created_at
+  };
 }

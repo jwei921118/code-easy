@@ -3,6 +3,7 @@ import path from "node:path";
 import { AgentEventSchema, type AgentEvent } from "@code-easy/ui-protocol";
 import { ensureLocalStorageRoot, readFileIfExists } from "./localStorage.js";
 import type {
+  PendingApprovalRecord,
   RunCompletedRecord,
   RunStartedRecord,
   SessionStore,
@@ -41,11 +42,13 @@ async function readJsonLines<T>(filePath: string): Promise<T[]> {
 export class FileSessionStore implements SessionStore {
   private readonly runsPath: string;
   private readonly eventsPath: string;
+  private readonly pendingApprovalsPath: string;
   private writeChain: Promise<void> = Promise.resolve();
 
   constructor(private readonly rootPath: string) {
     this.runsPath = path.join(rootPath, "runs.jsonl");
     this.eventsPath = path.join(rootPath, "events.jsonl");
+    this.pendingApprovalsPath = path.join(rootPath, "pending-approvals.jsonl");
   }
 
   async recordRunStarted(record: RunStartedRecord): Promise<void> {
@@ -132,6 +135,35 @@ export class FileSessionStore implements SessionStore {
     return runId === undefined ? records : records.filter((record) => record.event.runId === runId);
   }
 
+  async recordPendingApproval(record: PendingApprovalRecord): Promise<void> {
+    await this.enqueue(async () => {
+      await this.ensureRoot();
+      const records = await this.listPendingApprovals();
+      const nextRecords = [...records.filter((candidate) => candidate.approvalId !== record.approvalId), record];
+      await writeJsonLines(this.pendingApprovalsPath, nextRecords);
+    });
+  }
+
+  async getPendingApproval(approvalId: string): Promise<PendingApprovalRecord | undefined> {
+    const records = await this.listPendingApprovals();
+    return records.find((record) => record.approvalId === approvalId);
+  }
+
+  async deletePendingApproval(approvalId: string): Promise<void> {
+    await this.enqueue(async () => {
+      await this.ensureRoot();
+      const records = await this.listPendingApprovals();
+      await writeJsonLines(
+        this.pendingApprovalsPath,
+        records.filter((record) => record.approvalId !== approvalId)
+      );
+    });
+  }
+
+  async listPendingApprovals(): Promise<PendingApprovalRecord[]> {
+    return readJsonLines<PendingApprovalRecord>(this.pendingApprovalsPath);
+  }
+
   private async appendJsonLine(filePath: string, value: unknown): Promise<void> {
     await this.enqueue(async () => {
       await this.ensureRoot();
@@ -149,6 +181,10 @@ export class FileSessionStore implements SessionStore {
   private async ensureRoot(): Promise<void> {
     await ensureLocalStorageRoot(this.rootPath);
   }
+}
+
+async function writeJsonLines<T>(filePath: string, values: T[]): Promise<void> {
+  await writeFile(filePath, values.map((value) => JSON.stringify(value)).join("\n") + (values.length > 0 ? "\n" : ""), "utf8");
 }
 
 function completionDetails(record: RunCompletedRecord): CompletionDetails {

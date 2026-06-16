@@ -138,27 +138,31 @@
 
 **Files:**
 
-- Modify: `packages/ui-protocol/src/commands.ts`
 - Modify: `packages/runtime/src/sessionManager.ts`
-- Modify: `packages/runtime/src/toolExecutor.ts`
 - Modify: `packages/storage/src/types.ts`
 - Modify: `packages/storage/src/sqlSessionRepository.ts`
+- Modify: `packages/storage/src/sqliteDriver.ts`
+- Modify: `packages/storage/src/sqliteSessionStore.ts`
+- Modify: `packages/storage/src/fileSessionStore.ts`
 - Modify: `apps/cli/src/index.ts`
 - Modify: `apps/cli/src/index.test.ts`
 
 **Work:**
 
-- [ ] Store pending approval records with run id, thread id, tool name, input, and model call id.
-- [ ] Persist and expose pending approvals across runtime/client boundaries using the existing `ApproveCommand` shape.
-- [ ] Let CLI prompt approve/deny during interactive runs.
-- [ ] Let non-interactive command output include the approval id and stop cleanly.
-- [ ] Persist approval decisions for session replay.
+- [x] Store pending approval records with run id, thread id, tool name, input, and model call id.
+- [x] Persist and expose pending approvals across runtime/client boundaries using the existing approval command shape.
+- [x] Add a CLI `approve <approvalId> --yes/--no` command.
+- [x] Let non-interactive command output include the approval id and stop cleanly.
+- [x] Persist approval decisions for session replay through the event stream.
+- [ ] Add same-process prompt-and-continue for interactive model runs.
 
 **Acceptance:**
 
-- [ ] Agent run pauses on write approval and exits with a clear pending state in non-interactive mode.
-- [ ] Interactive CLI can approve and continue the same run.
-- [ ] `code-easy resume <threadId>` can replay approval events.
+- [x] Agent run pauses on write approval and exits with a clear pending state in non-interactive mode.
+- [x] A new runtime manager can approve or deny a stored pending approval and continue the original run.
+- [x] `code-easy approve <approvalId> --yes/--no` resolves a pending approval.
+- [x] `code-easy resume <threadId>` can replay approval events.
+- [ ] Interactive CLI can approve and continue the same run without a second command.
 
 ### Task M1.5: Add Basic Plan / Act / Observe / Verify Loop
 

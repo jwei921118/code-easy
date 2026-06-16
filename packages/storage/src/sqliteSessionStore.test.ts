@@ -83,6 +83,56 @@ describe("SqliteSessionStore", () => {
     ]);
   });
 
+  it("persists and deletes pending approvals", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "code-easy-sqlite-store-"));
+    const store = await SqliteSessionStore.open(root);
+
+    await store.recordPendingApproval({
+      approvalId: "approval-1",
+      runId: "run-1",
+      threadId: "thread-1",
+      workspaceRoot: "/workspace",
+      call: {
+        callId: "call-1",
+        name: "apply_patch",
+        argumentsText: "{\"path\":\"hello.txt\",\"oldText\":\"old\",\"newText\":\"new\"}"
+      },
+      input: {
+        path: "hello.txt",
+        oldText: "old",
+        newText: "new",
+        expectedReplacements: 1
+      },
+      messages: [{ role: "user", content: "Patch hello" }],
+      toolResults: [{ callId: "call-read", output: "{\"ok\":true}" }],
+      nextRound: 2,
+      createdAt: "2026-06-16T00:00:00.000Z"
+    });
+
+    await expect(store.getPendingApproval("approval-1")).resolves.toMatchObject({
+      approvalId: "approval-1",
+      runId: "run-1",
+      threadId: "thread-1",
+      workspaceRoot: "/workspace",
+      call: {
+        callId: "call-1",
+        name: "apply_patch"
+      },
+      input: {
+        path: "hello.txt"
+      },
+      messages: [{ role: "user", content: "Patch hello" }],
+      toolResults: [{ callId: "call-read", output: "{\"ok\":true}" }],
+      nextRound: 2
+    });
+    await expect(store.listPendingApprovals()).resolves.toHaveLength(1);
+
+    await store.deletePendingApproval("approval-1");
+
+    await expect(store.getPendingApproval("approval-1")).resolves.toBeUndefined();
+    await expect(store.listPendingApprovals()).resolves.toEqual([]);
+  });
+
   it("keeps default .code-easy local SQLite storage out of git status", async () => {
     const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-sqlite-git-"));
     await execFileAsync("git", ["init"], { cwd: workspaceRoot });
