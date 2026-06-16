@@ -179,17 +179,17 @@
 
 **Work:**
 
-- [ ] Add Chinese comments before exported functions, classes, and public class methods explaining their role.
-- [ ] Add Chinese comments before non-trivial private helpers where behavior is not obvious from the name.
-- [ ] Keep comments short and focused on purpose, not line-by-line narration.
-- [ ] Skip test `it(...)` declarations, simple type aliases, obvious schema constants, and self-evident one-line helpers.
-- [ ] Avoid changing runtime behavior while adding comments.
+- [x] Add Chinese comments before exported functions, classes, and public class methods explaining their role.
+- [x] Add Chinese comments before non-trivial private helpers where behavior is not obvious from the name.
+- [x] Keep comments short and focused on purpose, not line-by-line narration.
+- [x] Skip test `it(...)` declarations, simple type aliases, obvious schema constants, and self-evident one-line helpers.
+- [x] Avoid changing runtime behavior while adding comments.
 
 **Acceptance:**
 
-- [ ] Core methods in CLI, runtime, storage, tools, protocol, and agent-core have Chinese purpose comments.
-- [ ] Comments explain why/what the method does without repeating implementation details.
-- [ ] `pnpm typecheck`, `pnpm test`, and `git diff --check` pass after comment-only changes.
+- [x] Core methods in CLI, runtime, storage, tools, protocol, and agent-core have Chinese purpose comments.
+- [x] Comments explain why/what the method does without repeating implementation details.
+- [x] `pnpm typecheck`, `pnpm test`, and `git diff --check` pass after comment-only changes.
 
 ### Task M1.6: Add Basic Plan / Act / Observe / Verify Loop
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { DateTimeStringSchema, IdSchema, NonEmptyStringSchema } from "./primitives.js";
 
+/** 描述运行、模型或工具失败时传给 UI 的标准错误结构。 */
 export const AgentErrorSchema = z.strictObject({
   category: z.enum([
     "cancelled",
@@ -15,6 +16,7 @@ export const AgentErrorSchema = z.strictObject({
   detail: z.string().optional()
 });
 
+/** 描述一个工具调用在 UI 中可展示的开始状态。 */
 export const ToolCallViewSchema = z.strictObject({
   toolCallId: IdSchema,
   name: NonEmptyStringSchema,
@@ -23,12 +25,14 @@ export const ToolCallViewSchema = z.strictObject({
   startedAt: DateTimeStringSchema
 });
 
+/** 工具完成事件的公共字段 schema。 */
 const ToolResultBaseSchema = z.strictObject({
   toolCallId: IdSchema,
   name: NonEmptyStringSchema,
   finishedAt: DateTimeStringSchema
 });
 
+/** 描述工具成功或失败后的 UI 可展示结果。 */
 export const ToolResultViewSchema = z.discriminatedUnion("ok", [
   ToolResultBaseSchema.extend({
     ok: z.literal(true),
@@ -40,6 +44,7 @@ export const ToolResultViewSchema = z.discriminatedUnion("ok", [
   }).strict()
 ]);
 
+/** 描述需要用户批准的工具请求。 */
 export const ApprovalRequestSchema = z.strictObject({
   approvalId: IdSchema,
   reason: NonEmptyStringSchema,
@@ -48,12 +53,14 @@ export const ApprovalRequestSchema = z.strictObject({
   toolName: NonEmptyStringSchema
 });
 
+/** 描述用户对审批请求的处理结果。 */
 export const ApprovalDecisionSchema = z.strictObject({
   approvalId: IdSchema,
   approved: z.boolean(),
   rememberForSession: z.boolean().default(false)
 });
 
+/** 定义运行时向 CLI/桌面端广播的全部事件协议。 */
 export const AgentEventSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("run.started"), runId: IdSchema, threadId: IdSchema }),
   z.strictObject({ type: z.literal("message.delta"), runId: IdSchema, text: z.string() }),

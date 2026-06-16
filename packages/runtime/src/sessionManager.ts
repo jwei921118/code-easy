@@ -69,6 +69,7 @@ type PendingModelApproval = {
   nextRound: number;
 };
 
+/** 将内存中的模型审批状态转换为可持久化记录。 */
 function toPendingApprovalRecord(pending: PendingModelApproval): PendingApprovalRecord {
   return {
     approvalId: pending.approvalId,
@@ -84,6 +85,7 @@ function toPendingApprovalRecord(pending: PendingModelApproval): PendingApproval
   };
 }
 
+/** 从持久化记录恢复模型审批状态，用于跨进程继续运行。 */
 function pendingModelApprovalFromRecord(record: PendingApprovalRecord): PendingModelApproval {
   return {
     approvalId: record.approvalId,
@@ -98,10 +100,12 @@ function pendingModelApprovalFromRecord(record: PendingApprovalRecord): PendingM
   };
 }
 
+/** 判断未知值是否为普通对象，便于后续安全读取字段。 */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+/** 从用户提示中提取默认搜索词，给确定性上下文收集使用。 */
 function extractSearchPattern(prompt: string): string {
   const quoted = prompt.match(/["']([^"']+)["']/);
   if (quoted?.[1]) return quoted[1];
@@ -113,6 +117,7 @@ function extractSearchPattern(prompt: string): string {
   return candidate ?? tokens[0] ?? prompt.trim();
 }
 
+/** 把 git_status 工具输出压缩成模型和 CLI 可读摘要。 */
 function summarizeGitStatus(output: unknown): string {
   if (!isRecord(output) || typeof output.stdout !== "string") return "Git status unavailable.";
 
@@ -120,6 +125,7 @@ function summarizeGitStatus(output: unknown): string {
   return status === "" ? "Git status: clean." : `Git status:\n${status}`;
 }
 
+/** 把 list_files 工具输出压缩成有限文件列表摘要。 */
 function summarizeFiles(output: unknown): string {
   if (!isRecord(output) || !Array.isArray(output.files)) return "Files unavailable.";
 
@@ -127,6 +133,7 @@ function summarizeFiles(output: unknown): string {
   return files.length === 0 ? "Files: none found." : `Files:\n${files.map((file) => `- ${file}`).join("\n")}`;
 }
 
+/** 把 rg_search 工具输出压缩成有限匹配摘要。 */
 function summarizeSearch(pattern: string, output: unknown): string {
   if (!isRecord(output) || !Array.isArray(output.matches)) return `Search matches for "${pattern}": unavailable.`;
 
@@ -143,6 +150,7 @@ function summarizeSearch(pattern: string, output: unknown): string {
     .join("\n")}`;
 }
 
+/** 管理一次或多次 Agent 运行，串联工具、模型、审批、事件和持久化。 */
 export class SessionManager {
   private readonly events = new AgentEventBus();
   private readonly tools: ToolRegistry;
@@ -151,6 +159,7 @@ export class SessionManager {
   private readonly model: string;
   private readonly pendingModelApprovals = new Map<string, PendingModelApproval>();
 
+  /** 初始化会话管理器，可注入工具、存储和模型提供方以支持测试或不同客户端。 */
   constructor(options: SessionManagerOptions = {}) {
     this.tools = options.tools ?? createDefaultToolRegistry();
     this.configuredStore = options.store;
@@ -158,10 +167,12 @@ export class SessionManager {
     this.model = options.model ?? "gpt-5-mini";
   }
 
+  /** 订阅运行时事件，供 CLI 渲染或存储层记录事件流。 */
   subscribe(handler: (event: AgentEvent) => void): () => void {
     return this.events.subscribe(handler);
   }
 
+  /** 执行用户任务：收集上下文、调用模型或确定性流程，并发布完整运行事件。 */
   async run(commandInput: RunCommand): Promise<RunResult> {
     const command = RuntimeCommandSchema.parse(commandInput);
 
@@ -231,10 +242,22 @@ export class SessionManager {
             tools: modelToolDefinitions,
             toolResults
           });
+          const retryResult =
+            (modelResult.toolCalls ?? []).length === 0 &&
+            (modelResult.text === undefined || modelResult.text.trim().length === 0)
+              ? await this.modelProvider.generateText({
+                  model: this.model,
+                  messages,
+                  toolResults
+                })
+              : modelResult;
 
-          const toolCalls = modelResult.toolCalls ?? [];
+          const toolCalls = retryResult.toolCalls ?? [];
           if (toolCalls.length === 0) {
-            messageText = modelResult.text ?? "";
+            messageText = retryResult.text;
+            if (messageText === undefined || messageText.trim().length === 0) {
+              throw new Error("Model returned an empty response.");
+            }
             summary = "Model response completed.";
             break;
           }
@@ -341,6 +364,7 @@ export class SessionManager {
     }
   }
 
+  /** 为 run() 的确定性上下文收集执行只读工具，并返回工具输出。 */
   private async executeToolForRun(runId: string, workspaceRoot: string, toolName: string, input: unknown): Promise<unknown> {
     const tool = this.tools.get(toolName);
 
@@ -374,6 +398,7 @@ export class SessionManager {
     }
   }
 
+  /** 解析模型返回的工具参数 JSON，并为错误附加工具名上下文。 */
   private parseToolArguments(call: ModelToolCall): unknown {
     try {
       return JSON.parse(call.argumentsText) as unknown;
@@ -383,6 +408,7 @@ export class SessionManager {
     }
   }
 
+  /** 执行模型请求的单个工具调用，并在 apply_patch 需要审批时保存暂停点。 */
   private async executeModelToolCall(
     runId: string,
     workspaceRoot: string,
@@ -460,6 +486,7 @@ export class SessionManager {
     }
   }
 
+  /** 直接运行一个指定工具，主要服务 CLI tool 子命令和底层能力验证。 */
   async runTool(command: RunToolCommand): Promise<RunToolResult> {
     const runId = randomUUID();
     const threadId = command.threadId ?? randomUUID();
@@ -545,6 +572,7 @@ export class SessionManager {
     }
   }
 
+  /** 处理用户对挂起审批的决定，并从原来的模型工具调用点继续运行。 */
   async approve(command: ApproveCommand): Promise<RunResult> {
     const store = await this.getStore(command.workspaceRoot);
     const pending = await this.loadPendingModelApproval(store, command.approvalId);
@@ -612,10 +640,22 @@ export class SessionManager {
           tools: modelToolDefinitions,
           toolResults
         });
+        const retryResult =
+          (modelResult.toolCalls ?? []).length === 0 &&
+          (modelResult.text === undefined || modelResult.text.trim().length === 0)
+            ? await this.modelProvider.generateText({
+                model: this.model,
+                messages: pending.messages,
+                toolResults
+              })
+            : modelResult;
 
-        const toolCalls = modelResult.toolCalls ?? [];
+        const toolCalls = retryResult.toolCalls ?? [];
         if (toolCalls.length === 0) {
-          messageText = modelResult.text ?? "";
+          messageText = retryResult.text;
+          if (messageText === undefined || messageText.trim().length === 0) {
+            throw new Error("Model returned an empty response.");
+          }
           summary = "Model response completed.";
           break;
         }
@@ -721,6 +761,7 @@ export class SessionManager {
     }
   }
 
+  /** 同时写入内存和持久化存储，确保审批可以在当前进程或新进程继续。 */
   private async rememberPendingModelApproval(
     store: SessionStore | undefined,
     pending: PendingModelApproval
@@ -729,6 +770,7 @@ export class SessionManager {
     await store?.recordPendingApproval(toPendingApprovalRecord(pending));
   }
 
+  /** 优先从内存读取审批状态，不存在时再从持久化存储恢复。 */
   private async loadPendingModelApproval(
     store: SessionStore | undefined,
     approvalId: string
@@ -740,11 +782,13 @@ export class SessionManager {
     return stored === undefined ? undefined : pendingModelApprovalFromRecord(stored);
   }
 
+  /** 列出当前工作区已持久化的会话摘要。 */
   async listSessions(command: WorkspaceSessionCommand): Promise<StoredSessionSummary[]> {
     const store = await this.getStore(command.workspaceRoot);
     return (await store?.listSessions()) ?? [];
   }
 
+  /** 重放历史会话事件；如果传入新 prompt，则在同一 thread 上启动续跑。 */
   async resume(command: ResumeSessionCommand): Promise<StoredSessionSummary | RunResult> {
     const store = await this.getStore(command.workspaceRoot);
     if (!store) {
@@ -778,12 +822,14 @@ export class SessionManager {
     return session;
   }
 
+  /** 获取会话存储；未注入时使用工作区内默认 SQLite 本地存储。 */
   private async getStore(workspaceRoot: string): Promise<SessionStore | undefined> {
     if (this.configuredStore === false) return undefined;
     if (this.configuredStore) return this.configuredStore;
     return SqliteSessionStore.open(path.join(workspaceRoot, ".code-easy", "local"));
   }
 
+  /** 捕获运行期间发布的事件，并提供批量 flush 和取消订阅能力。 */
   private captureStoredEvents(store: SessionStore | undefined): {
     flush: () => Promise<void>;
     unsubscribe: () => void;

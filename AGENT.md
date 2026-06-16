@@ -25,6 +25,7 @@ Implemented:
 - Provider-neutral `ModelProvider` runtime boundary.
 - LangChain ChatModel adapter with `@langchain/openai` for OpenAI-compatible chat gateways.
 - Read-only model tool calling for `git_status`, `list_files`, `rg_search`, and `read_file`.
+- Built-in fallback search when `rg_search` cannot find a local `ripgrep` binary.
 - Model-requested `apply_patch` behind runtime approval.
 - Durable pending approval records in session storage.
 - Tool registry for read/search/Git/patch/command execution tools.
@@ -32,6 +33,7 @@ Implemented:
 - SQLite-backed run and event persistence.
 - Shared runtime command and event schemas.
 - M1.1 cleanup: interactive debug output removed, large tool output bounded, and uppercase model ids rejected with a clearer config error.
+- M1.5 Chinese purpose comments on core methods across CLI/runtime/storage/tools/protocol/agent-core.
 
 Known gaps:
 
@@ -45,15 +47,15 @@ Known gaps:
 
 ## Next Task
 
-Start `M1.5: Add Chinese Explanatory Comments To Core Methods` from `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`.
+Start `M1.6: Add Basic Plan / Act / Observe / Verify Loop` from `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`.
 
-The M1.4 approval continuation path is implemented. Before the next behavior slice, add concise Chinese purpose comments to the core code:
+M1.5 is complete: the core code now has concise Chinese purpose comments on exported functions, classes, public methods, and non-trivial private helpers. Continue with the next behavior slice:
 
-1. Comment exported functions, classes, and public methods in CLI/runtime/storage/tools/protocol/agent-core.
-2. Comment non-trivial private helpers where intent is not obvious.
-3. Keep comments in Chinese, short, and focused on the method's role.
-4. Skip tests, simple type aliases, obvious schema constants, and line-by-line narration.
-5. After comments, continue with M1.6 plan / act / observe / verify loop.
+1. Move orchestration out of the current fixed context-gathering path.
+2. Introduce explicit plan, act, observe, and verify phases in the runtime/graph boundary.
+3. Keep tool calls, approvals, persistence, and UI events flowing through the existing shared APIs.
+4. Preserve current CLI behavior while adding the new loop incrementally.
+5. Verify with focused runtime tests first, then full `pnpm typecheck` and `pnpm test`.
 
 ## Execution Rules
 

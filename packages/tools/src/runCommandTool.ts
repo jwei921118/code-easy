@@ -21,19 +21,23 @@ type RunCommandOutput = {
   exitCode: number;
 };
 
+/** 表示命令执行目录不符合工作区边界约束。 */
 class WorkspaceExecuteDeniedError extends Error {
+  /** 创建工作区执行拒绝错误。 */
   constructor(message: string) {
     super(message);
     this.name = "WorkspaceExecuteDeniedError";
   }
 }
 
+/** 判断真实 cwd 是否仍位于工作区内。 */
 function isPathInside(root: string, target: string): boolean {
   const relativePath = path.relative(root, target);
 
   return relativePath === "" || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath));
 }
 
+/** 解析命令 cwd，并拒绝直接或通过 symlink 越过工作区。 */
 async function resolveCwdInsideWorkspace(workspaceRoot: string, relativeCwd: string): Promise<string> {
   const root = path.resolve(workspaceRoot);
   const resolved = path.resolve(root, relativeCwd);
@@ -51,6 +55,7 @@ async function resolveCwdInsideWorkspace(workspaceRoot: string, relativeCwd: str
   return cwdRealPath;
 }
 
+/** 判断 execFile 失败是否来自超时终止。 */
 function isTimeoutError(error: unknown): boolean {
   if (typeof error !== "object" || error === null) {
     return false;
@@ -60,11 +65,13 @@ function isTimeoutError(error: unknown): boolean {
   return candidate.killed === true && typeof candidate.signal === "string";
 }
 
+/** 在无 shell 环境下执行工作区内命令。 */
 export const runCommandTool: CodeEasyTool<typeof RunCommandInputSchema, RunCommandOutput> = {
   name: "run_command",
   risk: "execute",
   description: "Run a command without a shell inside the workspace.",
   inputSchema: RunCommandInputSchema,
+  /** 校验 cwd 后执行命令，并把失败映射为工具错误。 */
   async run(input, context) {
     let cwd: string;
 

@@ -1,9 +1,11 @@
 import type { ModelToolDefinition } from "./modelProvider.js";
 
+/** 模型允许直接调用的工具白名单；不包含 run_command。 */
 export const modelCallableToolNames = ["git_status", "list_files", "rg_search", "read_file", "apply_patch"] as const;
 
 export type ModelCallableToolName = (typeof modelCallableToolNames)[number];
 
+/** 生成模型工具参数的严格对象 schema，避免模型传入额外字段。 */
 const objectSchema = (properties: Record<string, unknown>, required: string[]): Record<string, unknown> => ({
   type: "object",
   properties,
@@ -11,6 +13,7 @@ const objectSchema = (properties: Record<string, unknown>, required: string[]): 
   additionalProperties: false
 });
 
+/** 暴露给模型的工具描述和参数 schema。 */
 export const modelToolDefinitions: ModelToolDefinition[] = [
   {
     name: "git_status",
@@ -79,6 +82,7 @@ export const modelToolDefinitions: ModelToolDefinition[] = [
   }
 ];
 
+/** 按名称查找允许模型直接调用的工具定义。 */
 export function getModelCallableTool(name: string): ModelToolDefinition | undefined {
   return modelToolDefinitions.find((tool) => tool.name === name);
 }

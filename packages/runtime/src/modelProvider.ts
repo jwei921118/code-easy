@@ -35,6 +35,7 @@ export type GenerateTextResult = {
 
 export type ModelProvider = {
   name: string;
+  /** 根据消息、工具定义和工具结果生成模型响应。 */
   generateText(input: GenerateTextInput): Promise<GenerateTextResult>;
 };
 
@@ -45,6 +46,7 @@ export type WorkspaceContextPromptInput = {
   searchSummary: string;
 };
 
+/** 把工作区上下文整理成模型可消费的 system/user 消息。 */
 export function buildWorkspaceContextMessages(input: WorkspaceContextPromptInput): ModelMessage[] {
   return [
     {

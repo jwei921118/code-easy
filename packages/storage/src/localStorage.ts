@@ -1,6 +1,7 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+/** 确保本地存储目录存在，并让默认 `.code-easy/local` 不进入 Git。 */
 export async function ensureLocalStorageRoot(rootPath: string): Promise<void> {
   await mkdir(rootPath, { recursive: true });
 
@@ -14,6 +15,7 @@ export async function ensureLocalStorageRoot(rootPath: string): Promise<void> {
   await writeFile(ignorePath, `${current}${current.length > 0 && !current.endsWith("\n") ? "\n" : ""}*\n`, "utf8");
 }
 
+/** 读取文件内容；文件不存在时返回空字符串。 */
 export async function readFileIfExists(filePath: string): Promise<string> {
   try {
     await stat(filePath);

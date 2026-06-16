@@ -18,11 +18,11 @@ After each task:
 
 ## Current Snapshot
 
-Status: M1.4 approval continuation is implemented. The project has a working CLI/runtime foundation with read-only model tool calling, SQLite event persistence, project-local model config, a LangChain OpenAI-compatible provider path, model-requested `apply_patch` approval, stored pending approvals, `code-easy approve <approvalId> --yes/--no`, and same-process interactive approval prompts for TTY runs.
+Status: M1.5 Chinese core method comments are implemented. The project has a working CLI/runtime foundation with read-only model tool calling, SQLite event persistence, project-local model config, a LangChain OpenAI-compatible provider path, model-requested `apply_patch` approval, stored pending approvals, `code-easy approve <approvalId> --yes/--no`, same-process interactive approval prompts for TTY runs, concise Chinese purpose comments across the core code, and a built-in search fallback when `ripgrep` is not installed.
 
 Branch: `codex/approval-continue-flow`
 
-Working tree: clean at last check after the M1.4 cleanup/review commit.
+Working tree: comment/doc changes are pending commit.
 
 Verification:
 
@@ -70,6 +70,11 @@ Implemented:
 - M1.3 model-requested `apply_patch` behind in-memory runtime approval, with `diff.ready`, `run.paused`, approved continuation, and denied continuation.
 - M1.4 durable pending approval records and CLI `approve <approvalId> --yes/--no` continuation command.
 - M1.4 same-process interactive approval prompt for TTY `run` and chat flows.
+- M1.5 Chinese purpose comments on core methods in CLI, runtime, storage, tools, permissions, protocol, and agent-core.
+- `rg_search` now falls back to built-in Node text search when `rg` is unavailable on the user's machine and skips local `.worktrees`.
+- Empty model final responses now fail clearly instead of producing a blank completed run.
+- If a provider returns an empty response when tools are enabled, runtime retries once without tool definitions for OpenAI-compatible gateways with partial tool-call support.
+- Interactive chat catches per-turn runtime failures and returns to the prompt instead of letting Node print a stack trace and exit.
 
 Known gap:
 
@@ -78,6 +83,53 @@ Known gap:
 - Checkpoint-based resume and richer workspace context are not implemented yet.
 
 ## Task Log
+
+### 2026-06-16 - Add built-in search fallback
+
+Completed:
+
+- Added a regression test for `rg_search` when `ripgrep` is not installed or not present in `PATH`.
+- Kept `ripgrep` as the fast path when available.
+- Added a Node-based fallback that recursively searches workspace files while skipping generated directories.
+- Excluded `.worktrees` from both the `ripgrep` fast path and Node fallback search.
+- Preserved workspace path validation before both the `rg` fast path and fallback path.
+- Made empty model final responses fail with `Model returned an empty response.` instead of completing silently.
+- Added a compatibility retry that calls the model once without tool definitions when a tool-enabled call returns empty content and no tool calls.
+- Disabled LangChain OpenAI retries so failing provider calls return control to the CLI promptly.
+- Caught interactive chat turn failures so a bad provider response does not terminate the REPL loop with a stack trace.
+
+Verification:
+
+- `pnpm --filter @code-easy/tools test -- rgSearchTool.test.ts` passed.
+- `pnpm --filter @code-easy/runtime test -- sessionManager.test.ts` passed.
+- `pnpm --filter @code-easy/cli test -- index.test.ts` passed.
+- `pnpm typecheck` passed.
+- `pnpm test` passed.
+
+Next:
+
+- Continue with M1.6: add a basic plan / act / observe / verify loop.
+
+### 2026-06-16 - Add Chinese core method comments
+
+Completed:
+
+- Added concise Chinese purpose comments to core CLI helpers and approval prompt flow.
+- Added Chinese comments to runtime orchestration, model provider/config adapters, event bus, tool registry, and tool executor methods.
+- Added Chinese comments to storage implementations, SQL driver/repository boundaries, pending approval persistence, and session store interfaces.
+- Added Chinese comments to tool implementations, path guards, permission risk helpers, protocol schemas, and the minimal agent graph/state.
+- Kept changes comment-only; runtime behavior and test expectations were not changed.
+
+Verification:
+
+- `pnpm typecheck` passed.
+- `pnpm test` passed.
+- `git diff --check` passed.
+- `rg "sk-[A-Za-z0-9]{10,}" .` found no committed secrets.
+
+Next:
+
+- Start M1.6: add a basic plan / act / observe / verify loop.
 
 ### 2026-06-16 - Add task for Chinese core method comments
 
@@ -521,6 +573,6 @@ Next:
 
 ## Next Steps
 
-1. Execute M1.5 from `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`: add Chinese explanatory comments to core methods.
-2. Keep comments concise and purpose-focused; avoid line-by-line narration.
-3. After M1.5, continue with M1.6: plan / act / observe / verify loop.
+1. Execute M1.6 from `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`: add a basic plan / act / observe / verify loop.
+2. Preserve the existing CLI behavior while moving orchestration toward explicit runtime phases.
+3. Keep approvals, event emission, and persistence behind the existing shared APIs.

@@ -26,6 +26,7 @@ export type LoadModelConfigInput = {
   disabled?: boolean;
 };
 
+/** 按项目配置优先、环境变量兜底的顺序读取模型设置。 */
 function readSetting(
   settings: ProjectModelSettings | undefined,
   env: Record<string, string | undefined>,
@@ -34,6 +35,7 @@ function readSetting(
   return settings?.[key] ?? env[key];
 }
 
+/** 规范化模型提供方名称，并拒绝暂不支持的 provider。 */
 function normalizeProvider(
   provider: string | undefined,
 ): 'off' | 'openai' {
@@ -43,6 +45,7 @@ function normalizeProvider(
   throw new Error(`Unsupported CODE_EASY_MODEL_PROVIDER: ${provider}`);
 }
 
+/** 校验模型 id，避免把大小写不匹配的别名误传给 provider。 */
 function validateModelId(name: string, value: string): string {
   if (/[A-Z]/.test(value)) {
     throw new Error(
@@ -53,6 +56,7 @@ function validateModelId(name: string, value: string): string {
   return value;
 }
 
+/** 读取工作区 `.code-easy/config.json` 中的模型设置。 */
 export async function loadProjectModelSettings(
   workspaceRoot: string,
 ): Promise<ProjectModelSettings> {
@@ -90,6 +94,7 @@ export async function loadProjectModelSettings(
   }
 }
 
+/** 合并项目设置、环境变量和 CLI 覆盖，生成运行时模型配置。 */
 export function loadModelConfig(input: LoadModelConfigInput = {}): ModelConfig {
   if (input.disabled === true) return { enabled: false };
 
@@ -137,6 +142,7 @@ export function loadModelConfig(input: LoadModelConfigInput = {}): ModelConfig {
   };
 }
 
+/** 根据模型配置创建实际 provider；关闭模型时返回 false。 */
 export function createModelProviderFromConfig(
   config: ModelConfig,
 ): ModelProvider | false {

@@ -20,14 +20,17 @@ export type ToolExecutionOutcome =
   | { status: "approval_required"; approvalId: string }
   | { status: "completed"; toolCallId: string };
 
+/** 生成统一 ISO 时间戳，保证工具事件时间格式一致。 */
 function nowIso(): string {
   return new Date().toISOString();
 }
 
+/** 判断工具风险是否需要用户审批。 */
 function isApprovalRisk(risk: ToolRisk): risk is ApprovalRisk {
   return risk !== "read";
 }
 
+/** 将工具层错误归一化为 UI 协议中的 AgentError。 */
 function toAgentError(error: { category: "tool_failed" | "timeout" | "denied"; message: string; detail?: string }): AgentError {
   return {
     category: error.category,
@@ -36,9 +39,12 @@ function toAgentError(error: { category: "tool_failed" | "timeout" | "denied"; m
   };
 }
 
+/** 负责执行工具，并在执行前后发出审批、开始和完成事件。 */
 export class PermissionedToolExecutor {
+  /** 注入事件总线，让执行器可以把工具生命周期广播给外部。 */
   constructor(private readonly events: AgentEventBus) {}
 
+  /** 执行单次工具调用；写入/执行风险工具会先返回审批请求。 */
   async execute<TInputSchema extends z.ZodTypeAny, TOutput>(
     request: ToolExecutionRequest<TInputSchema, TOutput>
   ): Promise<ToolExecutionOutcome> {

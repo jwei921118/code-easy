@@ -17,12 +17,14 @@ type ListFilesOutput = {
 
 const ignoredDirectories = new Set([".git", "node_modules", "dist", "coverage", ".turbo", ".code-easy", ".codegraph"]);
 
+/** 判断目录项是否应从文件列表中排除。 */
 function shouldSkipEntry(name: string, includeHidden: boolean): boolean {
   if (ignoredDirectories.has(name)) return true;
   if (!includeHidden && name.startsWith(".")) return true;
   return false;
 }
 
+/** 递归收集工作区文件，并在超过 limit 后停止深入。 */
 async function collectFiles(
   workspaceRoot: string,
   directoryPath: string,
@@ -52,11 +54,13 @@ async function collectFiles(
   }
 }
 
+/** 列出工作区内文件，默认跳过生成目录和隐藏目录。 */
 export const listFilesTool: CodeEasyTool<typeof ListFilesInputSchema, ListFilesOutput> = {
   name: "list_files",
   risk: "read",
   description: "List files inside the workspace while skipping generated directories.",
   inputSchema: ListFilesInputSchema,
+  /** 校验目录边界后返回有限文件列表。 */
   async run(input, context) {
     try {
       const workspaceRealPath = await realpath(context.workspaceRoot);

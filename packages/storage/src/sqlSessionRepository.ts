@@ -39,9 +39,12 @@ type PendingApprovalRow = SqlRow & {
   created_at: string;
 };
 
+/** 基于抽象 SQL driver 实现会话、事件和审批记录持久化。 */
 export class SqlSessionRepository implements SessionStore {
+  /** 注入 SQL driver，让 repository 不依赖具体数据库实现。 */
   constructor(private readonly driver: SqlDriver) {}
 
+  /** 写入运行启动记录。 */
   async recordRunStarted(record: RunStartedRecord): Promise<void> {
     this.driver.execute(
       "insert into runs (run_id, thread_id, workspace_root, prompt, started_at) values (?, ?, ?, ?, ?)",
@@ -49,6 +52,7 @@ export class SqlSessionRepository implements SessionStore {
     );
   }
 
+  /** 写入运行完成或失败记录。 */
   async recordRunCompleted(record: RunCompletedRecord): Promise<void> {
     this.driver.execute(
       "insert into run_completions (run_id, status, completed_at, summary, error) values (?, ?, ?, ?, ?)",
@@ -56,6 +60,7 @@ export class SqlSessionRepository implements SessionStore {
     );
   }
 
+  /** 校验并写入一条 Agent 事件。 */
   async recordEvent(event: AgentEvent): Promise<void> {
     const parsed = AgentEventSchema.parse(event);
     this.driver.execute("insert into events (run_id, type, event_json) values (?, ?, ?)", [
@@ -65,6 +70,7 @@ export class SqlSessionRepository implements SessionStore {
     ]);
   }
 
+  /** 查询所有运行并按 thread 聚合为会话摘要。 */
   async listSessions(): Promise<StoredSessionSummary[]> {
     const rows = this.driver.query<RunRow>(`
       select
@@ -112,6 +118,7 @@ export class SqlSessionRepository implements SessionStore {
     return [...byThreadId.values()].sort((left, right) => right.lastUpdatedAt.localeCompare(left.lastUpdatedAt));
   }
 
+  /** 按序读取事件流；可按 runId 过滤。 */
   async listEvents(runId?: string): Promise<StoredEventRecord[]> {
     const rows =
       runId === undefined
@@ -126,6 +133,7 @@ export class SqlSessionRepository implements SessionStore {
     }));
   }
 
+  /** 插入或替换一个待审批记录，保留继续模型运行所需上下文。 */
   async recordPendingApproval(record: PendingApprovalRecord): Promise<void> {
     this.driver.execute(
       `
@@ -157,6 +165,7 @@ export class SqlSessionRepository implements SessionStore {
     );
   }
 
+  /** 按审批 id 查询待审批记录。 */
   async getPendingApproval(approvalId: string): Promise<PendingApprovalRecord | undefined> {
     const row = this.driver.queryOne<PendingApprovalRow>(
       "select * from pending_approvals where approval_id = ?",
@@ -166,11 +175,13 @@ export class SqlSessionRepository implements SessionStore {
     return row === undefined ? undefined : pendingApprovalFromRow(row);
   }
 
+  /** 删除已经被批准或拒绝的待审批记录。 */
   async deletePendingApproval(approvalId: string): Promise<void> {
     this.driver.execute("delete from pending_approvals where approval_id = ?", [approvalId]);
   }
 }
 
+/** 将 SQL 行里的 JSON 字段反序列化为运行时审批记录。 */
 function pendingApprovalFromRow(row: PendingApprovalRow): PendingApprovalRecord {
   return {
     approvalId: row.approval_id,

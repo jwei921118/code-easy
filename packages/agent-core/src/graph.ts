@@ -1,6 +1,7 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { AgentStateAnnotation } from "./state.js";
 
+/** 创建当前最小 LangGraph 流程，为后续 plan/act/observe/verify 节点预留入口。 */
 export function createCodeEasyGraph() {
   return new StateGraph(AgentStateAnnotation)
     .addNode("intake", async (state) => {

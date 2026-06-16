@@ -14,11 +14,13 @@ type GitStatusOutput = {
   stderr: string;
 };
 
+/** 安全读取工作区 Git 状态，禁用可能触发外部进程的仓库配置。 */
 export const gitStatusTool: CodeEasyTool<typeof GitStatusInputSchema, GitStatusOutput> = {
   name: "git_status",
   risk: "read",
   description: "Inspect Git status for the workspace.",
   inputSchema: GitStatusInputSchema,
+  /** 运行 git status 并返回 stdout/stderr。 */
   async run(input, context) {
     try {
       const args = [

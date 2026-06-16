@@ -316,6 +316,80 @@ describe("SessionManager", () => {
     });
   });
 
+  it("fails clearly when the model provider returns an empty final response", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-empty-model-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "README.md"), "Empty model response context\n", "utf8");
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText() {
+          return { text: "" };
+        }
+      },
+      model: "fake-model"
+    });
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    await expect(
+      manager.run({
+        kind: "run",
+        workspaceRoot,
+        prompt: "Explain empty model response"
+      })
+    ).rejects.toThrow("Model returned an empty response.");
+
+    expect(events.at(-1)).toMatchObject({
+      type: "run.failed",
+      error: {
+        category: "runtime_failed",
+        message: "Session run failed.",
+        detail: "Model returned an empty response."
+      }
+    });
+  });
+
+  it("retries without tool definitions when a provider returns an empty response with tools", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-toolless-retry-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "README.md"), "Toolless retry context\n", "utf8");
+    const calls: unknown[] = [];
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText(input) {
+          calls.push(input);
+          if (input.tools !== undefined) return { text: "" };
+          return { text: "fallback model answer" };
+        }
+      },
+      model: "fake-model"
+    });
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    await manager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Explain fallback"
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toMatchObject({ tools: expect.any(Array) });
+    expect(calls[1]).not.toHaveProperty("tools");
+    expect(events.find((event) => event.type === "message.delta")).toMatchObject({
+      type: "message.delta",
+      text: "fallback model answer"
+    });
+  });
+
   it("keeps deterministic workspace inspection when modelProvider is false", async () => {
     const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-no-model-"));
     await execFileAsync("git", ["init"], { cwd: workspaceRoot });

@@ -30,6 +30,7 @@ type ApprovalCommandOptions = WorkspaceModelOptions & {
 
 const MAX_TOOL_OUTPUT_CHARS = 12_000;
 
+/** 将工具输出格式化为适合终端展示的 JSON，并限制超大输出长度。 */
 function renderJsonOutput(output: unknown): string {
   const text = JSON.stringify(output, null, 2);
   if (text.length <= MAX_TOOL_OUTPUT_CHARS) return text;
@@ -37,6 +38,7 @@ function renderJsonOutput(output: unknown): string {
   return `${text.slice(0, MAX_TOOL_OUTPUT_CHARS)}\n[output truncated: ${text.length - MAX_TOOL_OUTPUT_CHARS} characters omitted]`;
 }
 
+/** 按“命令局部参数优先，全局参数兜底”的规则读取 commander 选项。 */
 function commandOption<T>(
   localOptions: Record<string, unknown>,
   globalOptions: Record<string, unknown>,
@@ -50,6 +52,7 @@ function commandOption<T>(
   );
 }
 
+/** 解析需要工作区和模型配置的命令选项。 */
 function resolveWorkspaceModelOptions(
   localOptions: Record<string, unknown>,
 ): WorkspaceModelOptions {
@@ -71,6 +74,7 @@ function resolveWorkspaceModelOptions(
   };
 }
 
+/** 解析直接执行工具命令所需的工作区和审批选项。 */
 function resolveToolOptions(
   localOptions: Record<string, unknown>,
 ): ToolCommandOptions {
@@ -92,6 +96,7 @@ function resolveToolOptions(
   };
 }
 
+/** 解析审批继续命令的工作区、模型和批准/拒绝选项。 */
 function resolveApprovalOptions(
   localOptions: Record<string, unknown>,
 ): ApprovalCommandOptions {
@@ -114,6 +119,7 @@ function resolveApprovalOptions(
   };
 }
 
+/** 将 CLI 的字符串参数解析为工具输入对象，并把 JSON 错误转成用户可读异常。 */
 function parseJsonInput(input: string): unknown {
   try {
     return JSON.parse(input);
@@ -124,6 +130,7 @@ function parseJsonInput(input: string): unknown {
   }
 }
 
+/** 在终端中询问一次审批决定，供写入或执行类工具继续运行。 */
 async function promptForApproval(
   toolName: string,
   existingReadline?: Interface,
@@ -148,6 +155,7 @@ async function promptForApproval(
   }
 }
 
+/** 从项目配置和环境变量创建带模型提供方的运行时会话管理器。 */
 async function createSessionManager(
   options: WorkspaceModelOptions,
 ): Promise<SessionManager> {
@@ -165,6 +173,7 @@ async function createSessionManager(
   });
 }
 
+/** 启动持续对话模式，并在同一 thread 中串联后续用户输入。 */
 async function startChat(options: WorkspaceModelOptions): Promise<void> {
   const manager = await createSessionManager(options);
   const readline = createInterface({
@@ -187,32 +196,38 @@ async function startChat(options: WorkspaceModelOptions): Promise<void> {
       }
       if (trimmed === ':q' || trimmed === 'exit' || trimmed === 'quit') break;
 
-      let result;
-      if (threadId === undefined) {
-        result = await manager.run({
-          kind: 'run',
+      try {
+        let result;
+        if (threadId === undefined) {
+          result = await manager.run({
+            kind: 'run',
+            workspaceRoot: options.workspace,
+            prompt,
+          });
+        } else {
+          result = await manager.run({
+            kind: 'run',
+            workspaceRoot: options.workspace,
+            threadId,
+            prompt,
+          });
+        }
+        result = await continueAfterApprovalPrompt({
+          manager,
           workspaceRoot: options.workspace,
-          prompt,
+          result,
+          shouldPrompt: process.stdin.isTTY === true,
+          prompt: (approvalId) =>
+            promptForApproval(`approval ${approvalId}`, readline),
         });
-      } else {
-        result = await manager.run({
-          kind: 'run',
-          workspaceRoot: options.workspace,
-          threadId,
-          prompt,
-        });
-      }
-      result = await continueAfterApprovalPrompt({
-        manager,
-        workspaceRoot: options.workspace,
-        result,
-        shouldPrompt: process.stdin.isTTY === true,
-        prompt: (approvalId) =>
-          promptForApproval(`approval ${approvalId}`, readline),
-      });
 
-      if ('threadId' in result) {
-        threadId = result.threadId;
+        if ('threadId' in result) {
+          threadId = result.threadId;
+        }
+      } catch (error) {
+        console.error(
+          `Command failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
 
       readline.prompt();
@@ -222,6 +237,7 @@ async function startChat(options: WorkspaceModelOptions): Promise<void> {
   }
 }
 
+/** 把运行时事件转换为当前 CLI 的文本输出。 */
 function renderEvent(event: AgentEvent): void {
   switch (event.type) {
     case 'run.started':
@@ -281,6 +297,7 @@ function renderEvent(event: AgentEvent): void {
   }
 }
 
+/** 渲染本地持久化的会话摘要列表。 */
 function renderSessions(
   sessions: Awaited<ReturnType<SessionManager['listSessions']>>,
 ): void {

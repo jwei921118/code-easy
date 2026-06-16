@@ -12,6 +12,7 @@ type ContinueAfterApprovalPromptInput = {
   prompt: ApprovalPrompt;
 };
 
+/** 在交互式 CLI 中处理审批暂停，并在用户批准/拒绝后继续同一个运行。 */
 export async function continueAfterApprovalPrompt(
   input: ContinueAfterApprovalPromptInput
 ): Promise<RunResult> {
