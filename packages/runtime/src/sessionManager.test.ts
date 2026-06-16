@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -381,6 +381,290 @@ describe("SessionManager", () => {
     });
   });
 
+  it("pauses when the model requests apply_patch and does not modify the file before approval", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-model-patch-pause-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "hello.txt"), "hello old world", "utf8");
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText() {
+          return {
+            toolCalls: [
+              {
+                callId: "call-apply",
+                name: "apply_patch",
+                argumentsText:
+                  "{\"path\":\"hello.txt\",\"oldText\":\"old\",\"newText\":\"new\",\"expectedReplacements\":1}"
+              }
+            ]
+          };
+        }
+      }
+    });
+    const events: AgentEvent[] = [];
+    let pendingRegisteredWhenApprovalRequested: boolean | undefined;
+
+    manager.subscribe((event) => {
+      events.push(event);
+      if (event.type === "approval.requested") {
+        const pendingModelApprovals = (
+          manager as unknown as { pendingModelApprovals: Map<string, unknown> }
+        ).pendingModelApprovals;
+        pendingRegisteredWhenApprovalRequested = pendingModelApprovals.has(event.request.approvalId);
+      }
+    });
+
+    const result = await manager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Patch hello"
+    });
+
+    expect(result).toMatchObject({
+      status: "approval_required",
+      threadId: expect.any(String),
+      runId: expect.any(String),
+      approvalId: expect.any(String)
+    });
+    expect(events.map((event) => event.type)).toContain("diff.ready");
+    expect(events.map((event) => event.type)).toContain("approval.requested");
+    expect(pendingRegisteredWhenApprovalRequested).toBe(true);
+    expect(events.at(-1)).toMatchObject({
+      type: "run.paused",
+      reason: "approval_required",
+      approvalId: result.approvalId
+    });
+    expect(events.some((event) => event.type === "tool.started" && event.call.name === "apply_patch")).toBe(false);
+    await expect(readFile(path.join(workspaceRoot, "hello.txt"), "utf8")).resolves.toBe("hello old world");
+  });
+
+  it("includes all expected replacements in the apply_patch approval diff", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-model-patch-preview-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "hello.txt"), "old and old", "utf8");
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText() {
+          return {
+            toolCalls: [
+              {
+                callId: "call-apply",
+                name: "apply_patch",
+                argumentsText:
+                  "{\"path\":\"hello.txt\",\"oldText\":\"old\",\"newText\":\"new\",\"expectedReplacements\":2}"
+              }
+            ]
+          };
+        }
+      }
+    });
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    await manager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Patch hello"
+    });
+
+    const diff = events.find((event) => event.type === "diff.ready")?.diff ?? "";
+    expect(diff.match(/^-old$/gm)).toHaveLength(2);
+    expect(diff.match(/^\+new$/gm)).toHaveLength(2);
+    await expect(readFile(path.join(workspaceRoot, "hello.txt"), "utf8")).resolves.toBe("old and old");
+  });
+
+  it("rejects invalid model apply_patch arguments before requesting approval", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-model-patch-invalid-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "hello.txt"), "hello old world", "utf8");
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText() {
+          return {
+            toolCalls: [
+              {
+                callId: "call-apply",
+                name: "apply_patch",
+                argumentsText: "{\"path\":\"hello.txt\",\"newText\":\"new\",\"expectedReplacements\":1}"
+              }
+            ]
+          };
+        }
+      }
+    });
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    await expect(
+      manager.run({
+        kind: "run",
+        workspaceRoot,
+        prompt: "Patch hello"
+      })
+    ).rejects.toThrow();
+    expect(events.some((event) => event.type === "diff.ready")).toBe(false);
+    expect(events.some((event) => event.type === "approval.requested")).toBe(false);
+    await expect(readFile(path.join(workspaceRoot, "hello.txt"), "utf8")).resolves.toBe("hello old world");
+  });
+
+  it("continues a paused model apply_patch run after approval", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-model-patch-approve-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "hello.txt"), "hello old world", "utf8");
+    const calls: unknown[] = [];
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText(input) {
+          calls.push(input);
+          if (calls.length === 1) {
+            return {
+              toolCalls: [
+                {
+                  callId: "call-apply",
+                  name: "apply_patch",
+                  argumentsText:
+                    "{\"path\":\"hello.txt\",\"oldText\":\"old\",\"newText\":\"new\",\"expectedReplacements\":1}"
+                }
+              ]
+            };
+          }
+
+          return { text: "Patch applied and ready" };
+        }
+      }
+    });
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    const paused = await manager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Patch hello"
+    });
+
+    expect(paused).toMatchObject({
+      status: "approval_required",
+      approvalId: expect.any(String)
+    });
+    await expect(readFile(path.join(workspaceRoot, "hello.txt"), "utf8")).resolves.toBe("hello old world");
+
+    const completed = await manager.approve({
+      workspaceRoot,
+      approvalId: paused.approvalId!,
+      approved: true
+    });
+
+    expect(completed).toMatchObject({
+      runId: paused.runId,
+      threadId: paused.threadId,
+      status: "completed"
+    });
+    await expect(readFile(path.join(workspaceRoot, "hello.txt"), "utf8")).resolves.toBe("hello new world");
+    expect(calls).toHaveLength(2);
+    expect(JSON.stringify(calls[1])).toContain("call-apply");
+    expect(JSON.stringify(calls[1])).toContain("hello.txt");
+    expect(events.find((event) => event.type === "approval.resolved")).toMatchObject({
+      type: "approval.resolved",
+      runId: paused.runId,
+      decision: {
+        approvalId: paused.approvalId,
+        approved: true
+      }
+    });
+    expect(events.filter((event) => event.type === "diff.ready")).toHaveLength(1);
+    expect(events.find((event) => event.type === "message.delta")).toMatchObject({
+      type: "message.delta",
+      runId: paused.runId,
+      text: "Patch applied and ready"
+    });
+    expect(events.at(-1)).toMatchObject({
+      type: "run.completed",
+      runId: paused.runId,
+      summary: "Model response completed."
+    });
+  });
+
+  it("continues a paused model apply_patch run after denial without modifying the file", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-model-patch-deny-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "hello.txt"), "hello old world", "utf8");
+    const calls: unknown[] = [];
+    const manager = new SessionManager({
+      modelProvider: {
+        name: "fake",
+        async generateText(input) {
+          calls.push(input);
+          if (calls.length === 1) {
+            return {
+              toolCalls: [
+                {
+                  callId: "call-apply",
+                  name: "apply_patch",
+                  argumentsText:
+                    "{\"path\":\"hello.txt\",\"oldText\":\"old\",\"newText\":\"new\",\"expectedReplacements\":1}"
+                }
+              ]
+            };
+          }
+
+          return { text: "Patch denied" };
+        }
+      }
+    });
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    const paused = await manager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Patch hello"
+    });
+
+    const completed = await manager.approve({
+      workspaceRoot,
+      approvalId: paused.approvalId!,
+      approved: false
+    });
+
+    expect(completed).toMatchObject({
+      runId: paused.runId,
+      threadId: paused.threadId,
+      status: "completed"
+    });
+    expect(events.find((event) => event.type === "approval.resolved")).toMatchObject({
+      type: "approval.resolved",
+      runId: paused.runId,
+      decision: {
+        approvalId: paused.approvalId,
+        approved: false
+      }
+    });
+    expect(events.find((event) => event.type === "message.delta")).toMatchObject({
+      type: "message.delta",
+      runId: paused.runId,
+      text: "Patch denied"
+    });
+    expect(events.filter((event) => event.type === "tool.started" && event.call.name === "apply_patch")).toHaveLength(0);
+    expect(JSON.stringify(calls[1])).toContain("User denied apply_patch");
+    await expect(readFile(path.join(workspaceRoot, "hello.txt"), "utf8")).resolves.toBe("hello old world");
+  });
+
   it("fails when the model requests a non-callable tool", async () => {
     const manager = new SessionManager({
       modelProvider: {
@@ -616,6 +900,37 @@ describe("SessionManager", () => {
       request: {
         risk: "execute",
         toolName: "run_command"
+      }
+    });
+  });
+
+  it("uses a supplied approval id when resolving an approved tool execution", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-approved-id-"));
+    await writeFile(path.join(workspaceRoot, "hello.txt"), "hello old world", "utf8");
+    const manager = new SessionManager();
+    const events: AgentEvent[] = [];
+
+    manager.subscribe((event) => {
+      events.push(event);
+    });
+
+    await manager.runTool({
+      workspaceRoot,
+      toolName: "apply_patch",
+      input: {
+        path: "hello.txt",
+        oldText: "old",
+        newText: "new"
+      },
+      approved: true,
+      approvalId: "approval-known"
+    });
+
+    expect(events.find((event) => event.type === "approval.resolved")).toMatchObject({
+      type: "approval.resolved",
+      decision: {
+        approvalId: "approval-known",
+        approved: true
       }
     });
   });

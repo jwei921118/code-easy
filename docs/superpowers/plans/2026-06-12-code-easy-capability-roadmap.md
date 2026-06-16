@@ -33,7 +33,7 @@
 - `packages/agent-core/src/graph.ts` is still a minimal placeholder graph.
 - `SessionManager.run()` owns most orchestration directly instead of using a real plan/act/observe/verify graph.
 - Model-directed tools are read-only; the model cannot yet request `apply_patch` or `run_command`.
-- Approval requests can be emitted, but full agent interrupt/resume around approvals is not implemented.
+- Model-requested `apply_patch` can pause for in-memory runtime approval and continue after approval or denial.
 - Resume replays events and starts a new run; it is not checkpoint-based continuation.
 - Workspace context is shallow: Git status, file list, simple search pattern.
 - CLI output is line-based and noisy; tool output is not folded or diff-aware.
@@ -119,18 +119,18 @@
 
 **Work:**
 
-- [ ] Add `apply_patch` to model-callable tools with strict schema.
-- [ ] Keep `run_command` unavailable to the model until approval continuation works.
-- [ ] When model requests `apply_patch`, emit `approval.requested` instead of throwing.
-- [ ] Preserve pending model tool call state so approved execution can resume.
-- [ ] Emit `diff.ready` before or after patch execution so clients can render the edit.
+- [x] Add `apply_patch` to model-callable tools with strict schema.
+- [x] Keep `run_command` unavailable to the model until approval continuation works.
+- [x] When model requests `apply_patch`, emit `approval.requested` instead of throwing.
+- [x] Preserve pending model tool call state so approved execution can resume.
+- [x] Emit `diff.ready` before or after patch execution so clients can render the edit.
 
 **Acceptance:**
 
-- [ ] Model-requested `apply_patch` produces approval instead of executing immediately.
-- [ ] Approved patch execution emits `approval.resolved`, `tool.started`, `tool.completed`, and final model response.
-- [ ] Denied patch execution produces a useful model-visible denial result.
-- [ ] Existing direct `code-easy tool apply_patch ... --yes` still works.
+- [x] Model-requested `apply_patch` produces approval instead of executing immediately.
+- [x] Approved patch execution emits `approval.resolved`, `tool.started`, `tool.completed`, and final model response.
+- [x] Denied patch execution produces a useful model-visible denial result.
+- [x] Existing direct `code-easy tool apply_patch ... --yes` still works.
 
 ### Task M1.4: Implement Approval Continue Flow
 
@@ -149,7 +149,7 @@
 **Work:**
 
 - [ ] Store pending approval records with run id, thread id, tool name, input, and model call id.
-- [ ] Add `SessionManager.approve()` or a runtime command handler for `ApproveCommand`.
+- [ ] Persist and expose pending approvals across runtime/client boundaries using the existing `ApproveCommand` shape.
 - [ ] Let CLI prompt approve/deny during interactive runs.
 - [ ] Let non-interactive command output include the approval id and stop cleanly.
 - [ ] Persist approval decisions for session replay.
@@ -378,8 +378,8 @@
 
 1. M1.1 - Clean current CLI and config surface.
 2. M1.2 - Add OpenAI Chat Completions provider for third-party gateways.
-3. M1.3 - Add model-requested `apply_patch` behind approval.
-4. M1.4 - Implement approval continue flow.
+3. M1.4 - Implement durable approval continue flow through runtime commands, CLI prompts, and storage.
+4. M1.5 - Move orchestration into LangGraph nodes with checkpointing.
 5. M1.5 - Add basic plan/act/observe/verify loop.
 6. M1.6 - Improve workspace context loading.
 7. M2.1 - Add SQLite checkpoint adapter.

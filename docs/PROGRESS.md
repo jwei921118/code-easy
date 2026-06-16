@@ -18,21 +18,25 @@ After each task:
 
 ## Current Snapshot
 
-Status: M1.3 implementation plan is ready. The project has a working CLI/runtime foundation with read-only model tool calling, SQLite event persistence, project-local model config, and a LangChain OpenAI-compatible provider path. The next objective is to execute the M1.3 plan: allow model-requested `apply_patch` only behind runtime approval.
+Status: M1.3 is implemented in runtime. The project has a working CLI/runtime foundation with read-only model tool calling, SQLite event persistence, project-local model config, a LangChain OpenAI-compatible provider path, and model-requested `apply_patch` guarded by in-memory runtime approval. The next objective is M1.4: make approval continuation durable and connect it to CLI/runtime commands.
 
-Branch: `main`
+Branch: `codex/model-apply-patch-approval`
 
-Working tree: dirty at last check; current uncommitted work adds the M1.3 implementation plan and progress handoff updates.
+Working tree: dirty at last check; current uncommitted work completes the M1.3 runtime approval implementation and documentation updates.
 
 Verification:
 
-- `pnpm test` passed on 2026-06-12.
-- `pnpm typecheck` passed on 2026-06-12.
+- `pnpm --filter @code-easy/runtime test -- sessionManager.test.ts modelToolSchemas.test.ts` passed on 2026-06-16.
+- `pnpm --filter @code-easy/tools test -- applyPatchTool.test.ts` passed on 2026-06-16.
+- `pnpm --filter @code-easy/ui-protocol test -- events.test.ts` passed on 2026-06-16.
+- `pnpm --filter @code-easy/runtime typecheck` passed on 2026-06-16.
+- `pnpm typecheck` passed on 2026-06-16.
+- `pnpm test` passed on 2026-06-16.
 - `pnpm --filter @code-easy/cli test -- index.test.ts` passed on 2026-06-12.
 - `pnpm --filter @code-easy/runtime test -- modelConfig.test.ts` passed on 2026-06-12.
 - `pnpm --filter @code-easy/runtime test -- langchainChatModelProvider.test.ts modelConfig.test.ts` passed on 2026-06-12.
-- `rg "sk-[A-Za-z0-9]{10,}" .` found no committed secrets on 2026-06-12.
-- `git diff --check` passed on 2026-06-12.
+- `rg "sk-[A-Za-z0-9]{10,}" .` found no committed secrets on 2026-06-16.
+- `git diff --check` passed on 2026-06-16.
 - `git diff --check -- docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md` passed on 2026-06-12.
 
 Primary references:
@@ -59,14 +63,43 @@ Implemented:
 - Project-local `.code-easy/config.json` settings using `CODE_EASY_*` keys.
 - M1.1 CLI/config cleanup: debug output removed, large tool output bounded, and uppercase model ids rejected with a clear case-sensitivity error.
 - M1.2 LangChain ChatModel adapter with `@langchain/openai` for OpenAI-compatible chat gateways.
+- M1.3 model-requested `apply_patch` behind in-memory runtime approval, with `diff.ready`, `run.paused`, approved continuation, and denied continuation.
 
 Known gap:
 
 - There is no `.planning/` GSD project state yet, so phase-level progress is tracked here and in `docs/superpowers/` until a GSD project is initialized.
 - `packages/agent-core/src/graph.ts` is still a placeholder graph.
-- Model-directed writes, approval continuation, checkpoint-based resume, and richer workspace context are not implemented yet.
+- Durable approval storage, CLI model-approval prompts, checkpoint-based resume, and richer workspace context are not implemented yet.
 
 ## Task Log
+
+### 2026-06-16 - Add model-requested apply patch approval gate
+
+Completed:
+
+- Added `apply_patch` to the model-callable tool allowlist while keeping `run_command` unavailable.
+- Emitted `diff.ready`, `approval.requested`, and `run.paused` for model-requested patches.
+- Paused model runs before write execution and kept pending approval state in memory.
+- Added runtime approval continuation through `SessionManager.approve()` for approved and denied decisions.
+- Preserved approval ids so `approval.resolved` matches the original request.
+- Added tests for pause, no pre-approval write, approved continuation, denied continuation, blocked `run_command`, and direct tool approval id reuse.
+
+Verification:
+
+- `pnpm --filter @code-easy/runtime test -- sessionManager.test.ts modelToolSchemas.test.ts` passed.
+- `pnpm --filter @code-easy/runtime typecheck` passed.
+- `pnpm --filter @code-easy/ui-protocol test -- events.test.ts` passed.
+- `pnpm --filter @code-easy/tools test -- applyPatchTool.test.ts` passed.
+- `pnpm typecheck` passed.
+- `pnpm test` passed.
+- `git diff --check` passed.
+- `rg "sk-[A-Za-z0-9]{10,}" .` found no committed secrets.
+- Spec review approved M1.3 coverage and scope.
+- Code quality review approved after fixing multi-replacement previews, pre-approval schema validation, and duplicate approved diff events.
+
+Next:
+
+- Start M1.4 after merge: durable approval records, CLI approval prompts for model-requested patches, and replayable approval continuation.
 
 ### 2026-06-16 - Plan M1.3 model-requested apply patch approval
 

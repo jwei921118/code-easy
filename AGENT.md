@@ -22,6 +22,7 @@ Implemented:
 - Provider-neutral `ModelProvider` runtime boundary.
 - LangChain ChatModel adapter with `@langchain/openai` for OpenAI-compatible chat gateways.
 - Read-only model tool calling for `git_status`, `list_files`, `rg_search`, and `read_file`.
+- Model-requested `apply_patch` behind in-memory runtime approval.
 - Tool registry for read/search/Git/patch/command execution tools.
 - Permission classification and approval event emission.
 - SQLite-backed run and event persistence.
@@ -32,8 +33,8 @@ Known gaps:
 
 - The graph in `packages/agent-core/src/graph.ts` is still a placeholder.
 - `SessionManager.run()` still owns most orchestration directly.
-- Model-directed writes and shell commands are not supported yet.
-- Approval interrupt/resume is incomplete.
+- Durable approval storage and CLI model-approval prompts are not implemented yet.
+- Model-directed shell commands are not supported yet.
 - Resume is event replay plus new runs, not checkpoint-based continuation.
 - Workspace context loading is shallow.
 - CLI output is still noisy and line-oriented.
@@ -41,15 +42,15 @@ Known gaps:
 
 ## Next Task
 
-Execute `docs/superpowers/plans/2026-06-16-model-apply-patch-approval.md` task by task.
+Start with `M1.4: Implement Approval Continue Flow` from `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`.
 
-Expected task-level flow:
+M1.4 should make the M1.3 in-memory approval path durable and client-ready:
 
-1. Add failing tests for `run.paused` and model-callable `apply_patch`.
-2. Implement the smallest passing runtime and tool changes.
-3. Add approved and denied continuation tests around `SessionManager.approve()`.
-4. Run focused tests, `pnpm typecheck`, `pnpm test`, `git diff --check`, and the secret scan.
-5. Update `docs/PROGRESS.md`.
+1. Persist pending approval records with run id, thread id, tool name, input, and model call id.
+2. Wire approval continuation through runtime commands and storage.
+3. Add CLI prompts for model-requested `apply_patch`.
+4. Keep `run_command` unavailable to model-directed calls until execute approval and sandbox policy are designed.
+5. Preserve the M1.3 tests for pause, no pre-approval write, approved continuation, and denied continuation.
 
 ## Execution Rules
 

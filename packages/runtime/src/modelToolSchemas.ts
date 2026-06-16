@@ -1,6 +1,6 @@
 import type { ModelToolDefinition } from "./modelProvider.js";
 
-export const modelCallableToolNames = ["git_status", "list_files", "rg_search", "read_file"] as const;
+export const modelCallableToolNames = ["git_status", "list_files", "rg_search", "read_file", "apply_patch"] as const;
 
 export type ModelCallableToolName = (typeof modelCallableToolNames)[number];
 
@@ -59,6 +59,22 @@ export const modelToolDefinitions: ModelToolDefinition[] = [
         maxBytes: { type: "number", description: "Maximum bytes to read, from 1 to 200000." }
       },
       ["path", "maxBytes"]
+    )
+  },
+  {
+    name: "apply_patch",
+    description: "Request approval to apply an exact text replacement to an existing workspace file.",
+    parameters: objectSchema(
+      {
+        path: { type: "string", description: "Workspace-relative file path." },
+        oldText: { type: "string", description: "Exact text currently in the file." },
+        newText: { type: "string", description: "Replacement text." },
+        expectedReplacements: {
+          type: "number",
+          description: "Expected number of replacements. Use 1 unless intentionally replacing repeated text."
+        }
+      },
+      ["path", "oldText", "newText", "expectedReplacements"]
     )
   }
 ];

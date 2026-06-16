@@ -13,6 +13,7 @@ export type ToolExecutionRequest<TInputSchema extends z.ZodTypeAny, TOutput> = {
   tool: CodeEasyTool<TInputSchema, TOutput>;
   input: unknown;
   approved?: boolean;
+  approvalId?: string;
 };
 
 export type ToolExecutionOutcome =
@@ -42,7 +43,7 @@ export class PermissionedToolExecutor {
     request: ToolExecutionRequest<TInputSchema, TOutput>
   ): Promise<ToolExecutionOutcome> {
     const decision = decidePermission(request.tool.name);
-    const approvalId = randomUUID();
+    const approvalId = request.approvalId ?? randomUUID();
 
     if (decision.action === "ask" && isApprovalRisk(decision.risk) && request.approved !== true) {
       const approvalRequest: ApprovalRequest = {
