@@ -65,6 +65,12 @@ export const AgentEventSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("diff.ready"), runId: IdSchema, diff: z.string() }),
   z.strictObject({ type: z.literal("approval.requested"), runId: IdSchema, request: ApprovalRequestSchema }),
   z.strictObject({ type: z.literal("approval.resolved"), runId: IdSchema, decision: ApprovalDecisionSchema }),
+  z.strictObject({
+    type: z.literal("run.paused"),
+    runId: IdSchema,
+    reason: z.literal("approval_required"),
+    approvalId: IdSchema
+  }),
   z.strictObject({ type: z.literal("run.completed"), runId: IdSchema, summary: NonEmptyStringSchema }),
   z.strictObject({ type: z.literal("run.failed"), runId: IdSchema, error: AgentErrorSchema })
 ]);

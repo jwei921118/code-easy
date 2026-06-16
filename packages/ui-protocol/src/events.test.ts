@@ -312,4 +312,20 @@ describe("ui protocol", () => {
 
     expect(decision.rememberForSession).toBe(false);
   });
+
+  it("validates a run paused event for pending approval", () => {
+    const event = AgentEventSchema.parse({
+      type: "run.paused",
+      runId: "run-1",
+      reason: "approval_required",
+      approvalId: "approval-1"
+    });
+
+    expect(event).toEqual({
+      type: "run.paused",
+      runId: "run-1",
+      reason: "approval_required",
+      approvalId: "approval-1"
+    });
+  });
 });
