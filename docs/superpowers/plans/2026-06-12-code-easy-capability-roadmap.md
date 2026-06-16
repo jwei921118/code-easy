@@ -164,7 +164,34 @@
 - [x] `code-easy resume <threadId>` can replay approval events.
 - [x] Interactive CLI can approve and continue the same run without a second command.
 
-### Task M1.5: Add Basic Plan / Act / Observe / Verify Loop
+### Task M1.5: Add Chinese Explanatory Comments To Core Methods
+
+**Purpose:** Make the core runtime easier to understand by adding concise Chinese comments that explain each important method's role.
+
+**Files:**
+
+- Modify: `apps/cli/src/*.ts`
+- Modify: `packages/runtime/src/*.ts`
+- Modify: `packages/storage/src/*.ts`
+- Modify: `packages/tools/src/*.ts`
+- Modify: `packages/agent-core/src/*.ts`
+- Modify: `packages/ui-protocol/src/*.ts`
+
+**Work:**
+
+- [ ] Add Chinese comments before exported functions, classes, and public class methods explaining their role.
+- [ ] Add Chinese comments before non-trivial private helpers where behavior is not obvious from the name.
+- [ ] Keep comments short and focused on purpose, not line-by-line narration.
+- [ ] Skip test `it(...)` declarations, simple type aliases, obvious schema constants, and self-evident one-line helpers.
+- [ ] Avoid changing runtime behavior while adding comments.
+
+**Acceptance:**
+
+- [ ] Core methods in CLI, runtime, storage, tools, protocol, and agent-core have Chinese purpose comments.
+- [ ] Comments explain why/what the method does without repeating implementation details.
+- [ ] `pnpm typecheck`, `pnpm test`, and `git diff --check` pass after comment-only changes.
+
+### Task M1.6: Add Basic Plan / Act / Observe / Verify Loop
 
 **Purpose:** Move orchestration out of fixed context gathering and toward agent execution.
 
@@ -190,7 +217,7 @@
 - [ ] A small code edit can be planned, patched, optionally verified, and summarized.
 - [ ] Runtime tests cover successful completion, max-round failure, and verification-needed branch.
 
-### Task M1.6: Improve Workspace Context Loading
+### Task M1.7: Improve Workspace Context Loading
 
 **Purpose:** Give the model enough local project context without relying on a fragile search-pattern heuristic.
 
@@ -383,9 +410,9 @@
 1. M1.1 - Clean current CLI and config surface.
 2. M1.2 - Add OpenAI Chat Completions provider for third-party gateways.
 3. M1.4 - Implement durable approval continue flow through runtime commands, CLI prompts, and storage.
-4. M1.5 - Move orchestration into LangGraph nodes with checkpointing.
-5. M1.5 - Add basic plan/act/observe/verify loop.
-6. M1.6 - Improve workspace context loading.
+4. M1.5 - Add Chinese explanatory comments to core methods.
+5. M1.6 - Add basic plan/act/observe/verify loop.
+6. M1.7 - Improve workspace context loading.
 7. M2.1 - Add SQLite checkpoint adapter.
 
 This order keeps the product usable after each task. It also ensures the desktop client waits until the runtime has stable behaviors worth rendering.

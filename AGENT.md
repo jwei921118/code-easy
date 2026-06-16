@@ -45,15 +45,15 @@ Known gaps:
 
 ## Next Task
 
-Start `M1.5: Add Basic Plan / Act / Observe / Verify Loop` from `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`.
+Start `M1.5: Add Chinese Explanatory Comments To Core Methods` from `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`.
 
-The M1.4 approval continuation path is implemented. The next capability slice should move orchestration beyond fixed context gathering:
+The M1.4 approval continuation path is implemented. Before the next behavior slice, add concise Chinese purpose comments to the core code:
 
-1. Add explicit plan state and events or structured messages.
-2. Route model outputs through a plan / tool / observation / next-decision loop.
-3. Add verification decision points before final responses when files changed.
-4. Keep `run_command` unavailable to model-directed calls until execute approval and sandbox policy are designed.
-5. Preserve the M1.3 tests for pause, no pre-approval write, approved continuation, and denied continuation.
+1. Comment exported functions, classes, and public methods in CLI/runtime/storage/tools/protocol/agent-core.
+2. Comment non-trivial private helpers where intent is not obvious.
+3. Keep comments in Chinese, short, and focused on the method's role.
+4. Skip tests, simple type aliases, obvious schema constants, and line-by-line narration.
+5. After comments, continue with M1.6 plan / act / observe / verify loop.
 
 ## Execution Rules
 

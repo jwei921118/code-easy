@@ -79,6 +79,23 @@ Known gap:
 
 ## Task Log
 
+### 2026-06-16 - Add task for Chinese core method comments
+
+Completed:
+
+- Added M1.5 to the capability roadmap for Chinese explanatory comments on core methods.
+- Scoped the task to exported functions, classes, public methods, and non-trivial private helpers.
+- Explicitly excluded tests, simple type aliases, obvious schema constants, and noisy line-by-line narration.
+- Updated `AGENT.md` so the next agent starts from this documentation task before M1.6.
+
+Verification:
+
+- Documentation-only change.
+
+Next:
+
+- Execute M1.5: add concise Chinese purpose comments to core methods.
+
 ### 2026-06-16 - Review M1.4 approval continuation cleanup
 
 Completed:
@@ -504,6 +521,6 @@ Next:
 
 ## Next Steps
 
-1. Execute `docs/superpowers/plans/2026-06-16-model-apply-patch-approval.md` task by task.
-2. Start with `run.paused` event schema tests and `apply_patch` model tool schema tests.
-3. After M1.3 lands, plan M1.4 durable approval continue flow.
+1. Execute M1.5 from `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md`: add Chinese explanatory comments to core methods.
+2. Keep comments concise and purpose-focused; avoid line-by-line narration.
+3. After M1.5, continue with M1.6: plan / act / observe / verify loop.
