@@ -1,6 +1,6 @@
 # Code Easy Progress
 
-Last updated: 2026-06-12
+Last updated: 2026-06-16
 
 ## Purpose
 
@@ -18,11 +18,11 @@ After each task:
 
 ## Current Snapshot
 
-Status: M1.2 LangChain ChatModel provider adapter is implemented, legacy raw provider code is removed, and verification is passing. The project has a working CLI/runtime foundation with read-only model tool calling, SQLite event persistence, and project-local model config. The next objective is M1.3: expand model tool calls to write tools behind approval.
+Status: M1.3 implementation plan is ready. The project has a working CLI/runtime foundation with read-only model tool calling, SQLite event persistence, project-local model config, and a LangChain OpenAI-compatible provider path. The next objective is to execute the M1.3 plan: allow model-requested `apply_patch` only behind runtime approval.
 
-Branch: `codex/langchain-chatmodel-adapter`
+Branch: `main`
 
-Working tree: dirty at last check; current uncommitted work removes legacy raw provider code and updates provider docs before merging to `main`.
+Working tree: dirty at last check; current uncommitted work adds the M1.3 implementation plan and progress handoff updates.
 
 Verification:
 
@@ -39,6 +39,7 @@ Primary references:
 
 - `AGENT.md` - short agent handoff, current goal, and execution rules.
 - `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md` - current capability roadmap and milestone task list.
+- `docs/superpowers/plans/2026-06-16-model-apply-patch-approval.md` - focused M1.3 implementation plan.
 - `docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md` - focused M1.2 implementation plan.
 - `docs/superpowers/specs/2026-05-26-code-easy-agent-design.md` - original product and architecture direction.
 
@@ -66,6 +67,25 @@ Known gap:
 - Model-directed writes, approval continuation, checkpoint-based resume, and richer workspace context are not implemented yet.
 
 ## Task Log
+
+### 2026-06-16 - Plan M1.3 model-requested apply patch approval
+
+Completed:
+
+- Added `docs/superpowers/plans/2026-06-16-model-apply-patch-approval.md`.
+- Scoped M1.3 to runtime capability: model-requested `apply_patch`, `diff.ready`, `approval.requested`, `run.paused`, and in-memory `SessionManager.approve()` continuation.
+- Kept durable approval storage, CLI approval prompts, and replayable approval continuation in M1.4.
+- Captured tests for pre-approval no-write behavior, approved continuation, denied continuation, and keeping `run_command` unavailable to the model.
+
+Verification:
+
+- Documentation-only change.
+- `git diff --check -- docs/superpowers/plans/2026-06-16-model-apply-patch-approval.md docs/PROGRESS.md AGENT.md` passed.
+
+Next:
+
+- Execute `docs/superpowers/plans/2026-06-16-model-apply-patch-approval.md` task by task.
+- Start with `run.paused` event schema tests, then add `apply_patch` to model-callable tools.
 
 ### 2026-06-12 - Remove legacy raw provider code
 
@@ -373,6 +393,6 @@ Next:
 
 ## Next Steps
 
-1. Optionally run a real OpenAI-compatible gateway smoke test with local-only `.code-easy/config.json`.
-2. Create a focused implementation plan for M1.3: add model-requested `apply_patch` behind approval.
-3. Continue to M1.3 implementation after the plan is reviewed.
+1. Execute `docs/superpowers/plans/2026-06-16-model-apply-patch-approval.md` task by task.
+2. Start with `run.paused` event schema tests and `apply_patch` model tool schema tests.
+3. After M1.3 lands, plan M1.4 durable approval continue flow.

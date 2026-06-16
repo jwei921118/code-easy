@@ -8,8 +8,9 @@ Build Code Easy into a Claude Code-like local coding agent. The current priority
 
 1. `docs/PROGRESS.md` - current status, latest completed work, and next actionable step.
 2. `docs/superpowers/plans/2026-06-12-code-easy-capability-roadmap.md` - capability roadmap and milestone task list.
-3. `docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md` - focused M1.2 implementation plan.
-4. `docs/superpowers/specs/2026-05-26-code-easy-agent-design.md` - original architecture and product direction.
+3. `docs/superpowers/plans/2026-06-16-model-apply-patch-approval.md` - focused M1.3 implementation plan.
+4. `docs/superpowers/plans/2026-06-12-langchain-chatmodel-provider-adapter.md` - focused M1.2 implementation summary.
+5. `docs/superpowers/specs/2026-05-26-code-easy-agent-design.md` - original architecture and product direction.
 
 ## Current Baseline
 
@@ -40,14 +41,14 @@ Known gaps:
 
 ## Next Task
 
-Start with `M1.3: Expand Model Tool Calls To Write Tools Behind Approval` from the roadmap.
+Execute `docs/superpowers/plans/2026-06-16-model-apply-patch-approval.md` task by task.
 
 Expected task-level flow:
 
-1. Create a focused implementation plan for M1.3 under `docs/superpowers/plans/`.
-2. Write failing tests first.
-3. Implement the smallest passing change.
-4. Run focused tests, then `pnpm typecheck`.
+1. Add failing tests for `run.paused` and model-callable `apply_patch`.
+2. Implement the smallest passing runtime and tool changes.
+3. Add approved and denied continuation tests around `SessionManager.approve()`.
+4. Run focused tests, `pnpm typecheck`, `pnpm test`, `git diff --check`, and the secret scan.
 5. Update `docs/PROGRESS.md`.
 
 ## Execution Rules
