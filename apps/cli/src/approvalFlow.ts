@@ -1,10 +1,10 @@
 import type { RunResult, SessionManager } from "@code-easy/runtime";
 
-export type ApprovalPrompt = (approvalId: string) => Promise<boolean>;
+type ApprovalPrompt = (approvalId: string) => Promise<boolean>;
 
-export type ApprovalFlowManager = Pick<SessionManager, "approve">;
+type ApprovalFlowManager = Pick<SessionManager, "approve">;
 
-export type ContinueAfterApprovalPromptInput = {
+type ContinueAfterApprovalPromptInput = {
   manager: ApprovalFlowManager;
   workspaceRoot: string;
   result: RunResult;

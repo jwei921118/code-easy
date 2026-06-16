@@ -36,18 +36,18 @@ export type StoredSessionSummary = {
   error?: string;
 };
 
-export type StoredModelMessage = {
+type StoredModelMessage = {
   role: "system" | "user";
   content: string;
 };
 
-export type StoredModelToolCall = {
+type StoredModelToolCall = {
   callId: string;
   name: string;
   argumentsText: string;
 };
 
-export type StoredModelToolResult = {
+type StoredModelToolResult = {
   callId: string;
   output: string;
 };
@@ -74,5 +74,4 @@ export interface SessionStore {
   recordPendingApproval(record: PendingApprovalRecord): Promise<void>;
   getPendingApproval(approvalId: string): Promise<PendingApprovalRecord | undefined>;
   deletePendingApproval(approvalId: string): Promise<void>;
-  listPendingApprovals(): Promise<PendingApprovalRecord[]>;
 }

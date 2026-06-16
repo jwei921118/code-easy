@@ -138,21 +138,21 @@ export class FileSessionStore implements SessionStore {
   async recordPendingApproval(record: PendingApprovalRecord): Promise<void> {
     await this.enqueue(async () => {
       await this.ensureRoot();
-      const records = await this.listPendingApprovals();
+      const records = await this.readPendingApprovals();
       const nextRecords = [...records.filter((candidate) => candidate.approvalId !== record.approvalId), record];
       await writeJsonLines(this.pendingApprovalsPath, nextRecords);
     });
   }
 
   async getPendingApproval(approvalId: string): Promise<PendingApprovalRecord | undefined> {
-    const records = await this.listPendingApprovals();
+    const records = await this.readPendingApprovals();
     return records.find((record) => record.approvalId === approvalId);
   }
 
   async deletePendingApproval(approvalId: string): Promise<void> {
     await this.enqueue(async () => {
       await this.ensureRoot();
-      const records = await this.listPendingApprovals();
+      const records = await this.readPendingApprovals();
       await writeJsonLines(
         this.pendingApprovalsPath,
         records.filter((record) => record.approvalId !== approvalId)
@@ -160,7 +160,7 @@ export class FileSessionStore implements SessionStore {
     });
   }
 
-  async listPendingApprovals(): Promise<PendingApprovalRecord[]> {
+  private async readPendingApprovals(): Promise<PendingApprovalRecord[]> {
     return readJsonLines<PendingApprovalRecord>(this.pendingApprovalsPath);
   }
 

@@ -125,12 +125,9 @@ describe("SqliteSessionStore", () => {
       toolResults: [{ callId: "call-read", output: "{\"ok\":true}" }],
       nextRound: 2
     });
-    await expect(store.listPendingApprovals()).resolves.toHaveLength(1);
-
     await store.deletePendingApproval("approval-1");
 
     await expect(store.getPendingApproval("approval-1")).resolves.toBeUndefined();
-    await expect(store.listPendingApprovals()).resolves.toEqual([]);
   });
 
   it("keeps default .code-easy local SQLite storage out of git status", async () => {

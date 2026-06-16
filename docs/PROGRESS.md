@@ -22,7 +22,7 @@ Status: M1.4 approval continuation is implemented. The project has a working CLI
 
 Branch: `codex/approval-continue-flow`
 
-Working tree: dirty at last check; current uncommitted work adds durable pending approvals, runtime approval restore, CLI approval command, and M1.4 documentation.
+Working tree: clean at last check after the M1.4 cleanup/review commit.
 
 Verification:
 
@@ -78,6 +78,29 @@ Known gap:
 - Checkpoint-based resume and richer workspace context are not implemented yet.
 
 ## Task Log
+
+### 2026-06-16 - Review M1.4 approval continuation cleanup
+
+Completed:
+
+- Removed unused `listPendingApprovals()` public API from the storage boundary and implementations.
+- Made internal pending approval model subtypes and CLI approval-flow helper types non-exported.
+- Fixed approval continuation so a missing model provider fails before any approved patch is executed.
+- Added a regression test proving `approve()` does not write files when model continuation is impossible.
+
+Verification:
+
+- `pnpm --filter @code-easy/storage test -- sqliteSessionStore.test.ts` passed.
+- `pnpm --filter @code-easy/runtime test -- sessionManager.test.ts` passed.
+- `pnpm --filter @code-easy/cli test -- approvalFlow.test.ts index.test.ts` passed.
+- `pnpm typecheck` passed.
+- `pnpm test` passed.
+- `git diff --check` passed.
+- `rg "sk-[A-Za-z0-9]{10,}" .` found no committed secrets.
+
+Next:
+
+- Start M1.5: move orchestration toward a plan / act / observe / verify loop.
 
 ### 2026-06-16 - Add durable approval continue flow
 

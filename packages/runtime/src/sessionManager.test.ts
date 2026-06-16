@@ -93,10 +93,6 @@ class CapturingStore implements SessionStore {
   async deletePendingApproval(approvalId: string): Promise<void> {
     this.pendingApprovals.delete(approvalId);
   }
-
-  async listPendingApprovals(): Promise<PendingApprovalRecord[]> {
-    return [...this.pendingApprovals.values()];
-  }
 }
 
 describe("SessionManager", () => {
@@ -806,6 +802,50 @@ describe("SessionManager", () => {
     await expect(readFile(path.join(workspaceRoot, "hello.txt"), "utf8")).resolves.toBe("hello old world");
     expect(JSON.stringify(calls[0])).toContain("User denied apply_patch");
     expect(store.pendingApprovals.has(paused.approvalId ?? "")).toBe(false);
+  });
+
+  it("does not execute a stored pending approval when no model provider is available", async () => {
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "code-easy-model-patch-no-provider-"));
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot });
+    await writeFile(path.join(workspaceRoot, "hello.txt"), "hello old world", "utf8");
+    const store = new CapturingStore();
+    const firstManager = new SessionManager({
+      store,
+      modelProvider: {
+        name: "fake",
+        async generateText() {
+          return {
+            toolCalls: [
+              {
+                callId: "call-apply",
+                name: "apply_patch",
+                argumentsText:
+                  "{\"path\":\"hello.txt\",\"oldText\":\"old\",\"newText\":\"new\",\"expectedReplacements\":1}"
+              }
+            ]
+          };
+        }
+      }
+    });
+    const paused = await firstManager.run({
+      kind: "run",
+      workspaceRoot,
+      prompt: "Patch hello"
+    });
+    const secondManager = new SessionManager({
+      store,
+      modelProvider: false
+    });
+
+    await expect(
+      secondManager.approve({
+        workspaceRoot,
+        approvalId: paused.approvalId!,
+        approved: true
+      })
+    ).rejects.toThrow("Cannot continue a model approval without a model provider.");
+
+    await expect(readFile(path.join(workspaceRoot, "hello.txt"), "utf8")).resolves.toBe("hello old world");
   });
 
   it("fails when the model requests a non-callable tool", async () => {

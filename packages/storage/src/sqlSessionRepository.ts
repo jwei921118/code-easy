@@ -169,14 +169,6 @@ export class SqlSessionRepository implements SessionStore {
   async deletePendingApproval(approvalId: string): Promise<void> {
     this.driver.execute("delete from pending_approvals where approval_id = ?", [approvalId]);
   }
-
-  async listPendingApprovals(): Promise<PendingApprovalRecord[]> {
-    const rows = this.driver.query<PendingApprovalRow>(
-      "select * from pending_approvals order by created_at asc"
-    );
-
-    return rows.map(pendingApprovalFromRow);
-  }
 }
 
 function pendingApprovalFromRow(row: PendingApprovalRow): PendingApprovalRecord {

@@ -560,9 +560,13 @@ export class SessionManager {
     const toolResults = [...pending.toolResults];
 
     try {
+      if (!this.modelProvider) {
+        throw new Error("Cannot continue a model approval without a model provider.");
+      }
+
       if (command.approved) {
         const approvedToolExecution = await this.executeModelToolCall(
-        pending.runId,
+          pending.runId,
         command.workspaceRoot,
         pending.call,
         pending.approvalId,
@@ -600,10 +604,6 @@ export class SessionManager {
 
       let messageText: string | undefined;
       let summary: string | undefined;
-
-      if (!this.modelProvider) {
-        throw new Error("Cannot continue a model approval without a model provider.");
-      }
 
       for (let round = pending.nextRound; round < 4; round += 1) {
         const modelResult = await this.modelProvider.generateText({

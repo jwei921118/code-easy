@@ -46,8 +46,4 @@ export class SqliteSessionStore implements SessionStore {
   async deletePendingApproval(approvalId: string) {
     return this.repository.deletePendingApproval(approvalId);
   }
-
-  async listPendingApprovals() {
-    return this.repository.listPendingApprovals();
-  }
 }
